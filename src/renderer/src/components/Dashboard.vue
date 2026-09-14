@@ -1227,15 +1227,16 @@ onMounted(async () => {
 								@update:model-value="persistAutoSync"
 							/>
 							<div class="pt-3">
-								<BaseButton
+								<button
 									@click="syncCurrentSettings"
 									:disabled="!isConnected || syncingMode"
-									variant="green"
-									class="w-full !rounded-xl flex items-center justify-center gap-2"
+									class="w-full flex items-center justify-center gap-2 rounded-xl bg-[#E95420]/15 hover:bg-[#E95420]/25 active:bg-[#E95420]/30 px-3 py-2 text-[13px] font-medium text-[#f9a88a] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
 								>
-									<ArrowLeftRight class="w-4 h-4" />
-									{{ syncingMode ? $t('connection.syncing') : $t('connection.syncSettings') }}
-								</BaseButton>
+									<ArrowLeftRight class="w-3.5 h-3.5 flex-shrink-0" />
+									<span class="truncate">{{
+										syncingMode ? $t('connection.syncing') : $t('connection.syncSettings')
+									}}</span>
+								</button>
 							</div>
 						</div>
 					</div>

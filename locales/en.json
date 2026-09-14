@@ -61,7 +61,7 @@
 		"switchToWired": "Switch to Wired",
 		"switchToWireless": "Switch to 2.4G",
 		"separateProfiles": "Wired and wireless keep separate profiles on the mouse — the other mode keeps its own DPI, lighting and buttons.",
-		"syncSettings": "Apply current settings to this mode",
+		"syncSettings": "Apply to this mode",
 		"syncing": "Applying settings to this mode...",
 		"synced": "Settings applied to this mode!",
 		"syncError": "Error",
