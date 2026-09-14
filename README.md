@@ -8,7 +8,7 @@ Desktop app to configure your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux
 >
 > Connects over the 2.4GHz receiver (249a:5c2f) or USB cable (248a:5c2e) — wired and wireless keep separate on-device profiles.
 
-<img width="1410" height="908" alt="AJAZZ AJ159P Linux app screenshot" src="https://github.com/user-attachments/assets/d28040b6-5572-47c8-a675-22aafa0376ea" />
+<img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/e47e255c-612d-4bea-89b6-fe7e0a3489cc" />
 
 > DPI range 100–26000 (hardware-verified). Custom macros and key-response are not available on this receiver protocol.
 
