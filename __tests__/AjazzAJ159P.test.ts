@@ -104,6 +104,22 @@ describe('AjazzAJ159P', () => {
 			expect(info.hidrawNode).toBe('/dev/hidraw9');
 			await driver.close();
 		});
+
+		it('reports wired USB IDs and mode for a wired connection', async () => {
+			const wiredHandle = createFakeHandle();
+			const wired = new AjazzAJ159P({
+				deviceModel: 'AJ159P',
+				connectionKind: 'wired',
+				logger: silentLogger,
+				transport: { node: '/dev/hidraw9', handle: wiredHandle },
+			});
+			await wired.open();
+			const info = wired.getDeviceInfo();
+			expect(info.vendorId).toBe('0x248a');
+			expect(info.productId).toBe('0x5c2e');
+			expect(info.connectionMode).toBe('Wired (USB)');
+			await wired.close();
+		});
 	});
 
 	describe('onBatteryChange()', () => {
@@ -138,6 +154,20 @@ describe('AjazzAJ159P', () => {
 			expect(levels).toEqual([96]);
 			unsubscribe();
 			await driver.close();
+		});
+
+		it('getBatteryLevel returns -1 immediately in wired mode without querying', async () => {
+			const wiredHandle = createFakeHandle();
+			const wired = new AjazzAJ159P({
+				deviceModel: 'AJ159P',
+				connectionKind: 'wired',
+				logger: silentLogger,
+				transport: { node: '/dev/hidraw9', handle: wiredHandle },
+			});
+			await wired.open();
+			await expect(wired.getBatteryLevel(1000)).resolves.toBe(-1);
+			expect(wiredHandle.writes).toHaveLength(0);
+			await wired.close();
 		});
 	});
 });

@@ -13,6 +13,10 @@ export interface AppSettings {
 	language: string;
 	pollingRate: number;
 	sleepMinutes: number;
+	/** Re-apply the file settings to the mouse on connect (diff-write). */
+	autoSync: boolean;
+	/** Button presets per slot; 'custom' leaves the on-device slot untouched. */
+	buttons: [string, string, string, string, string];
 	dpi: {
 		selected: number;
 		values: [number, number, number, number, number, number];
@@ -32,6 +36,8 @@ const DEFAULT_SETTINGS: AppSettings = {
 	language: 'en',
 	pollingRate: 1000,
 	sleepMinutes: 5,
+	autoSync: true,
+	buttons: ['default', 'default', 'default', 'default', 'default'],
 	dpi: {
 		selected: 2,
 		values: [...DEFAULT_DPI_VALUES] as [number, number, number, number, number, number],
@@ -56,6 +62,26 @@ function toColor(v: unknown, fallback: string): string {
 	return /^[0-9a-fA-F]{6}$/.test(value) ? `#${value.toLowerCase()}` : fallback;
 }
 
+const BUTTON_PRESET_IDS = new Set([
+	'default',
+	'left',
+	'right',
+	'middle',
+	'forward',
+	'backward',
+	'vol-up',
+	'vol-down',
+	'mute',
+	'play-pause',
+	'copy',
+	'paste',
+	'custom',
+]);
+
+function toButtonPreset(v: unknown, fallback: string): string {
+	return typeof v === 'string' && BUTTON_PRESET_IDS.has(v) ? v : fallback;
+}
+
 export async function getSettings(): Promise<AppSettings> {
 	try {
 		const data = await fs.readFile(getSettingsPath(), 'utf-8');
@@ -73,6 +99,13 @@ export async function getSettings(): Promise<AppSettings> {
 				typeof saved.sleepMinutes === 'number' && Number.isFinite(saved.sleepMinutes)
 					? saved.sleepMinutes
 					: DEFAULT_SETTINGS.sleepMinutes,
+			autoSync: typeof saved.autoSync === 'boolean' ? saved.autoSync : DEFAULT_SETTINGS.autoSync,
+			buttons: [0, 1, 2, 3, 4].map((i) =>
+				toButtonPreset(
+					Array.isArray(saved.buttons) ? saved.buttons[i] : undefined,
+					DEFAULT_SETTINGS.buttons[i] ?? 'default',
+				),
+			) as [string, string, string, string, string],
 			dpi: {
 				selected: toNum(saved.dpi?.selected, DEFAULT_SETTINGS.dpi.selected),
 				values: [0, 1, 2, 3, 4, 5].map((i) => toNum(dpiValues[i], DEFAULT_SETTINGS.dpi.values[i] ?? 800)) as [

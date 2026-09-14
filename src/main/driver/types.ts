@@ -15,6 +15,15 @@ export const AJAZZ_VID = 0x249a;
 /** USB product ID of the 2.4 GHz receiver (shared with AJ179 family). */
 export const AJ159P_PID = 0x5c2f;
 
+/** USB vendor ID of the wired mouse. */
+export const AJAZZ_WIRED_VID = 0x248a;
+
+/** USB product ID of the wired mouse. */
+export const AJ159P_WIRED_PID = 0x5c2e;
+
+/** Physical connection in use. Wired and wireless keep separate on-device profiles. */
+export type ConnectionKind = 'wireless' | 'wired';
+
 /** HID report size: 1 report-ID byte + 32 payload bytes. */
 export const REPORT_LENGTH = 33;
 

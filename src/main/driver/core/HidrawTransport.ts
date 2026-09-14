@@ -11,10 +11,11 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { DeviceError } from '../errors.js';
-import { AJAZZ_VID, AJ159P_PID, REPORT_LENGTH } from '../types.js';
+import { AJAZZ_VID, AJ159P_PID, REPORT_LENGTH, type ConnectionKind } from '../types.js';
 
-/** HID ID string as it appears in the device uevent file under /sys/class/hidraw. */
-const TARGET_HID_ID = 'HID_ID=0003:0000249A:00005C2F';
+/** HID ID strings as they appear in the device uevent file under /sys/class/hidraw. */
+const WIRELESS_HID_ID = 'HID_ID=0003:0000249A:00005C2F';
+const WIRED_HID_ID = 'HID_ID=0003:0000248A:00005C2E';
 
 /**
  * Minimal synchronous hidraw handle. Kept interface-small so tests can inject
@@ -71,6 +72,51 @@ class NodeHidrawHandle implements HidrawHandle {
 	}
 }
 
+export interface FoundReceiver {
+	node: string;
+	kind: ConnectionKind;
+}
+
+/**
+ * Finds all vendor-interface hidraw nodes (`MI_02`, interface 1.2) of the
+ * AJ159P — the 2.4 GHz receiver and/or the wired mouse — by scanning
+ * `/sys/class/hidraw`. Wireless entries come first.
+ */
+export function findAjazzReceivers(sysfsRoot = '/sys/class/hidraw', devRoot = '/dev'): FoundReceiver[] {
+	let entries: string[];
+	try {
+		entries = readdirSync(sysfsRoot)
+			.filter((entry) => entry.startsWith('hidraw'))
+			.sort();
+	} catch {
+		return [];
+	}
+	const found: FoundReceiver[] = [];
+	for (const entry of entries) {
+		let uevent: string;
+		let resolved: string;
+		try {
+			uevent = readFileSync(join(sysfsRoot, entry, 'device', 'uevent'), 'utf-8');
+			// Resolve the `device` symlink to check the USB interface number.
+			resolved = realpathSync(join(sysfsRoot, entry, 'device'));
+		} catch {
+			continue;
+		}
+		// MI_02 is the vendor/status channel. MI_00 and MI_01 share the same
+		// VID:PID but carry normal mouse and keyboard reports.
+		if (!resolved.includes(':1.2/')) continue;
+		let kind: ConnectionKind | null = null;
+		if (uevent.includes(WIRELESS_HID_ID)) kind = 'wireless';
+		else if (uevent.includes(WIRED_HID_ID)) kind = 'wired';
+		if (kind) {
+			const node = join(devRoot, entry);
+			if (existsSync(node)) found.push({ node, kind });
+		}
+	}
+	found.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'wireless' ? -1 : 1));
+	return found;
+}
+
 /**
  * Finds the vendor-interface hidraw node (`MI_02`, interface 1.2) of the
  * AJ159P 2.4 GHz receiver by scanning `/sys/class/hidraw`.
@@ -78,33 +124,7 @@ class NodeHidrawHandle implements HidrawHandle {
  * @returns `/dev/hidrawN` path, or `null` when not present.
  */
 export function findReceiverHidraw(sysfsRoot = '/sys/class/hidraw'): string | null {
-	let entries: string[];
-	try {
-		entries = readdirSync(sysfsRoot)
-			.filter((entry) => entry.startsWith('hidraw'))
-			.sort();
-	} catch {
-		return null;
-	}
-	for (const entry of entries) {
-		let uevent: string;
-		let resolved: string;
-		try {
-			uevent = readFileSync(join(sysfsRoot, entry, 'device', 'uevent'), 'utf-8');
-			resolved = join(sysfsRoot, entry, 'device');
-			// Resolve the `device` symlink to check the USB interface number.
-			resolved = realpathSync(resolved);
-		} catch {
-			continue;
-		}
-		// MI_02 is the vendor/status channel. MI_00 and MI_01 share the same
-		// VID:PID but carry normal mouse and keyboard reports.
-		if (uevent.includes(TARGET_HID_ID) && resolved.includes(':1.2/')) {
-			const node = `/dev/${entry}`;
-			if (existsSync(node)) return node;
-		}
-	}
-	return null;
+	return findAjazzReceivers(sysfsRoot).find((r) => r.kind === 'wireless')?.node ?? null;
 }
 
 /**
@@ -114,11 +134,11 @@ export function findReceiverHidraw(sysfsRoot = '/sys/class/hidraw'): string | nu
  * (missing udev rule — see `install.sh`).
  */
 export function openReceiverHidraw(path?: string): { node: string; handle: HidrawHandle } {
-	const node = path ?? findReceiverHidraw();
+	const node = path ?? findAjazzReceivers()[0]?.node;
 	if (!node) {
 		throw new DeviceError(
 			`AJ159P receiver (VID ${AJAZZ_VID.toString(16)} PID ${AJ159P_PID.toString(16)}) not found. ` +
-				'Plug in the 2.4 GHz dongle and check the udev rules.',
+				'Plug in the 2.4 GHz dongle or USB cable and check the udev rules.',
 		);
 	}
 	try {

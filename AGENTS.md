@@ -74,7 +74,7 @@ Cross-platform Electron + Vue 3 desktop app to configure the AJAZZ AJ159P / AJ15
 ## UNIQUE STYLES
 - **Hardware reverse-engineering style**: protocol builders encode exact HID report bytes, validated via golden hex strings (`builder.toString()`)
 - **DPI encoding (OPEN QUESTION)**: currently `value / 100` as u16LE, range 100..26000 step 100. Evidence for x100: Ajazzy UI-matched captures + live 0x13 readback shape. Evidence for x50: user feel (1600 feels like 800), aj179ctl defaults equal live raws x50, nibble 6 vs Ajazzy's 5. Evdev A/B test vs X11 reference was inconclusive (ratio 0.72 — uncontrolled path/X11 DPI). To resolve: controlled same-path evdev counts vs a calibrated reference
-- **Receiver**: VID=0x249a PID=0x5c2f (XCTECH Wireless-Receiver, shared with AJ179 family); vendor channel = MI_02 (`:1.2/`)
+- **Receiver**: wireless VID=0x249a PID=0x5c2f, wired VID=0x248a PID=0x5c2e (separate on-device profiles); vendor channel = MI_02 (`:1.2/`) on both
 - **DeviceModel**: `'AJ159P' | 'AJ159Pro'` — protocol identical, label only
 - **Battery**: hidraw C0-frame polling via BatteryMonitor; percentage at byte 2
 - **IPC**: all device commands go through `src/main/index.ts` handlers → driver methods; preload exposes 25 methods

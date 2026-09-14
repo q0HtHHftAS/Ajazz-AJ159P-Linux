@@ -1,11 +1,23 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AppSettings } from '../main/storage/settingsManager.js';
 
+export interface UpdateStatus {
+	status: string;
+	percent?: number;
+	version?: string;
+	message?: string;
+}
+
 // Custom APIs for renderer
 export const api = {
-	detectDevice: (): Promise<{ detected: boolean; node?: string }> => ipcRenderer.invoke('detect-device'),
-	connectDevice: (params?: { model?: string }): Promise<{ success: boolean; error?: string }> =>
-		ipcRenderer.invoke('connect-device', params),
+	detectDevice: (): Promise<{ detected: boolean; node?: string; kind?: string }> =>
+		ipcRenderer.invoke('detect-device'),
+	detectDevices: (): Promise<{ node: string; kind: string }[]> => ipcRenderer.invoke('detect-devices'),
+	connectDevice: (params?: {
+		model?: string;
+		kind?: string;
+	}): Promise<{ success: boolean; error?: string; kind?: string }> => ipcRenderer.invoke('connect-device', params),
+	disconnectDevice: (): Promise<{ success: boolean }> => ipcRenderer.invoke('disconnect-device'),
 	getBattery: (): Promise<number> => ipcRenderer.invoke('get-battery'),
 	setDpi: (config: unknown): Promise<number> => ipcRenderer.invoke('set-dpi', config),
 	setRgb: (config: unknown): Promise<number> => ipcRenderer.invoke('set-rgb', config),
@@ -28,7 +40,18 @@ export const api = {
 	saveSettings: (settings: AppSettings): Promise<void> => ipcRenderer.invoke('save-settings', settings),
 	getDeviceInfo: (): Promise<unknown> => ipcRenderer.invoke('get-device-info'),
 	getDeviceModel: (): Promise<'AJ159P' | 'AJ159Pro'> => ipcRenderer.invoke('get-device-model'),
+	getConnectionKind: (): Promise<'wireless' | 'wired'> => ipcRenderer.invoke('get-connection-kind'),
 	getDeviceCapabilities: (): Promise<Record<string, boolean>> => ipcRenderer.invoke('get-device-capabilities'),
+	checkForUpdates: (): Promise<{ success: boolean; version?: string; error?: string }> =>
+		ipcRenderer.invoke('check-for-updates'),
+	quitAndInstall: (): Promise<void> => ipcRenderer.invoke('quit-and-install'),
+	onUpdateStatus: (
+		callback: (status: { status: string; percent?: number; version?: string; message?: string }) => void,
+	): (() => void) => {
+		const handler = (_event: Electron.IpcRendererEvent, value: UpdateStatus): void => callback(value);
+		ipcRenderer.on('update-status', handler);
+		return () => ipcRenderer.removeListener('update-status', handler);
+	},
 	onBatteryUpdated: (callback: (level: number) => void): (() => void) => {
 		const handler = (_event: Electron.IpcRendererEvent, value: number): void => callback(value);
 		ipcRenderer.on('battery-updated', handler);

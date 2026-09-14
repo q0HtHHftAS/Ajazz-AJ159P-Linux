@@ -27,6 +27,8 @@ const DEFAULT_SETTINGS = {
 	language: 'en',
 	pollingRate: 1000,
 	sleepMinutes: 5,
+	autoSync: true,
+	buttons: ['default', 'default', 'default', 'default', 'default'],
 	dpi: {
 		selected: 2,
 		values: [1600, 3200, 4800, 6400, 12800, 23200],
@@ -114,6 +116,20 @@ describe('settingsManager', () => {
 			expect(settings.rgb.mode).toBe(DEFAULT_SETTINGS.rgb.mode);
 			expect(settings.rgb.color).toBe(DEFAULT_SETTINGS.rgb.color);
 			expect(settings.rgb.brightness).toBe(3);
+		});
+
+		it('should keep a saved autoSync=false, defaulting to true otherwise', async () => {
+			mockReadFile.mockResolvedValue(JSON.stringify({ autoSync: false }));
+			expect((await getSettings()).autoSync).toBe(false);
+
+			mockReadFile.mockResolvedValue(JSON.stringify({ autoSync: 'yes' }));
+			expect((await getSettings()).autoSync).toBe(true);
+		});
+
+		it('should validate button presets and pad with defaults', async () => {
+			mockReadFile.mockResolvedValue(JSON.stringify({ buttons: ['left', 'bogus', 'copy', 'custom'] }));
+			const settings = await getSettings();
+			expect(settings.buttons).toEqual(['left', 'default', 'copy', 'custom', 'default']);
 		});
 	});
 

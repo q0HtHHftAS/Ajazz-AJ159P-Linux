@@ -11,7 +11,7 @@ src/main/driver/
 ├── core/
 │   ├── AjazzAJ159P.ts      # Main driver (EventEmitter, open/close, setDpi/setRgb/polling/keys)
 │   ├── BatteryMonitor.ts   # C0-frame polling (parseBatteryFrame + BatteryMonitor)
-│   └── HidrawTransport.ts  # findReceiverHidraw, openReceiverHidraw, HidrawHandle
+│   └── HidrawTransport.ts  # findAjazzReceivers, openReceiverHidraw, HidrawHandle
 ├── protocols/
 │   ├── DpiBuilder.ts       # Report 00 03 00 01 25 (6-stage DPI)
 │   ├── DpiColorBuilder.ts  # Report 00 04 00 01 12 (stage-indicator colours)

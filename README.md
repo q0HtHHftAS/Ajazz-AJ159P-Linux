@@ -5,6 +5,8 @@
 Desktop app to configure your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux (Ubuntu) — DPI, lighting, polling rate, button remap, sleep timer, battery. The official AJAZZ driver is Windows-only; this is a community reverse-engineered alternative built with Electron + Vue 3.
 
 > Keywords: ajazz aj159p driver linux, aj159 pro linux software, 249a:5c2f hidraw, ajazz linux configurator.
+>
+> Connects over the 2.4GHz receiver (249a:5c2f) or USB cable (248a:5c2e) — wired and wireless keep separate on-device profiles.
 
 <img width="1410" height="908" alt="AJAZZ AJ159P Linux app screenshot" src="https://github.com/user-attachments/assets/d28040b6-5572-47c8-a675-22aafa0376ea" />
 
