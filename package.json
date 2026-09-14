@@ -1,0 +1,101 @@
+{
+	"name": "ajazz-aj159p",
+	"version": "0.1.0-beta",
+	"description": "Desktop configuration app for the AJAZZ AJ159P / AJ159 Pro gaming mouse.",
+	"desktopName": "ajazz-aj159p",
+	"author": {
+		"name": "q0HtHHftAS",
+		"email": "q0HtHHftAS@users.noreply.github.com"
+	},
+	"license": "MIT",
+	"homepage": "",
+	"keywords": [
+		"ajazz",
+		"aj159p",
+		"mouse",
+		"driver",
+		"linux",
+		"hid",
+		"typescript"
+	],
+	"main": "./out/main/index.js",
+	"scripts": {
+		"dev": "electron-vite dev",
+		"build": "electron-vite build",
+		"preview": "electron-vite preview",
+		"package": "electron-vite build && electron-builder",
+		"lint": "bunx eslint . --ext .ts --cache --cache-strategy content",
+		"lint:fix": "bunx eslint . --ext .ts --fix --cache --cache-strategy content",
+		"format": "bunx prettier --check . --cache --cache-strategy content",
+		"format:fix": "bunx prettier --write . --cache --cache-strategy content",
+		"typecheck": "tsc --noEmit",
+		"postinstall": "node node_modules/electron/install.js",
+		"prepare": "husky",
+		"test": "bun test"
+	},
+	"build": {
+		"icon": "assets/ajazz-aj159p.png",
+		"appId": "com.ajazz.aj159p",
+		"productName": "AJAZZ AJ159P",
+		"artifactName": "ajazz-aj159p-${version}.${ext}",
+		"directories": {
+			"output": "dist"
+		},
+		"files": [
+			"out/**/*",
+			"package.json",
+			"assets/**/*"
+		],
+		"linux": {
+			"target": [
+				"AppImage",
+				"deb"
+			],
+			"category": "Settings",
+			"icon": "assets/ajazz-aj159p.png",
+			"syncDesktopName": true
+		}
+	},
+	"lint-staged": {
+		"*.{ts,js,json}": [
+			"prettier --write",
+			"eslint --fix"
+		]
+	},
+	"dependencies": {
+		"@electron-toolkit/utils": "^4.0.0",
+		"lucide-vue-next": "^1.0.0",
+		"vue": "^3.5.41",
+		"vue-i18n": "^11.4.8"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@tailwindcss/vite": "^4.3.3",
+		"@types/bun": "1.4.2",
+		"@types/node": "^26.5.1",
+		"@vitejs/plugin-vue": "^6.0.8",
+		"electron": "^43.6.0",
+		"electron-builder": "^26.15.3",
+		"electron-vite": "^5.0.0",
+		"eslint": "^10.10.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.12.0",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.5.0",
+		"prettier": "3.9.6",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.70.0",
+		"vite": "^8.2.2"
+	},
+	"overrides": {
+		"@xmldom/xmldom": "^0.8.15",
+		"brace-expansion": "^5.0.9",
+		"browserslist": "^4.28.8",
+		"fast-uri": "^3.1.5",
+		"js-yaml": "^4.3.1",
+		"tar": "^7.5.21",
+		"undici": "^7.29.0"
+	},
+	"private": true
+}

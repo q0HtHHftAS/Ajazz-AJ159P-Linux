@@ -1,0 +1,340 @@
+/* eslint-disable */
+@import 'tailwindcss';
+
+/* --- Yaru (Ubuntu) single dark theme --- */
+@theme {
+	/* Ubuntu orange accent ramp */
+	--color-ajazz-primary-light: #f39c7e;
+	--color-ajazz-primary-dark: #c74416;
+	--color-ajazz-accent-light: #7ed492;
+	--color-ajazz-accent-dark: #1f8a38;
+	--color-ajazz-surface-1: #242322;
+	--color-ajazz-surface-2: #2e2c2a;
+	--color-ajazz-surface-3: #3a3733;
+	--color-ajazz-text: #f2f0ed;
+	--color-ajazz-text-secondary: #b8b2ab;
+	--color-ajazz-text-muted: #7d7670;
+	--color-ajazz-error: #e9271b;
+	--color-ajazz-error-light: #f5a39d;
+	--color-ajazz-warning: #f99b11;
+	--color-ajazz-warning-light: #fcc46f;
+	--color-ajazz-success: #38b44a;
+	--color-ajazz-success-light: #7ed492;
+	--color-ajazz-info: #19b6ee;
+	--color-ajazz-info-light: #7ccdec;
+}
+
+/* Dynamic accent resolved at runtime via CSS variables */
+@theme inline {
+	--color-ajazz-primary: var(--ajazz-primary);
+	--color-ajazz-accent: var(--ajazz-accent);
+	--color-ajazz-dark: var(--ajazz-dark);
+}
+
+:root {
+	/* Sidebar / dock */
+	--sidebar-bg: #201e1c;
+	--sidebar-border: #34302c;
+	--sidebar-hover: #2e2b28;
+	--sidebar-footer-bg: #1a1817;
+	--sidebar-footer-border: #34302c;
+	--sidebar-text: #b8b2ab;
+	--sidebar-text-dim: #7d7670;
+	--sidebar-text-muted: #4f4a45;
+	--sidebar-text-footer: #e6e1da;
+
+	/* Connection cards */
+	--connection-card-bg: #242322;
+	--connection-card-border: #3a3733;
+	--connection-card-hover: #2e2c2a;
+	--connection-card-text: #7d7670;
+
+	/* Surfaces */
+	--bg-primary: #161514;
+	--bg-card: #242322;
+	--bg-elevated: #2e2c2a;
+	--text-primary: #f2f0ed;
+	--text-secondary: #b8b2ab;
+	--text-muted: #7d7670;
+	--border-color: #3a3733;
+	--border-hover: #4f4a45;
+	--surface-hover: #2e2c2a;
+	--shadow-color: rgba(0, 0, 0, 0.45);
+	--focus-ring: rgba(233, 84, 32, 0.45);
+
+	/* Ubuntu accent */
+	--ajazz-primary: #e95420;
+	--ajazz-accent: #38b44a;
+	--ajazz-dark: #161514;
+
+	/* Backward compatibility aliases */
+	--border-card: var(--border-color);
+	--text-tertiary: var(--text-muted);
+	--color-accent: var(--ajazz-primary);
+}
+
+/* Ubuntu system font stack — no bundled fonts */
+body {
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	font-family:
+		'Ubuntu',
+		'Cantarell',
+		'Segoe UI',
+		system-ui,
+		-apple-system,
+		sans-serif;
+	overflow: hidden;
+}
+
+#app {
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+#sidebar {
+	position: relative;
+}
+
+/* --- Sidebar nav (Yaru dock style) --- */
+.yaru-nav {
+	position: relative;
+}
+.yaru-nav::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 20%;
+	bottom: 20%;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: var(--ajazz-primary);
+	transform: scaleY(0);
+	transition: transform 0.25s ease;
+}
+.yaru-nav-active {
+	background: rgba(233, 84, 32, 0.16) !important;
+	color: #f9a88a !important;
+}
+.yaru-nav-active::before {
+	transform: scaleY(1);
+}
+
+/* --- Tab transition animations --- */
+.fade-slide-enter-active {
+	transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fade-slide-leave-active {
+	transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fade-slide-enter-from {
+	opacity: 0;
+	transform: translateY(14px);
+}
+.fade-slide-leave-to {
+	opacity: 0;
+	transform: translateY(-10px);
+}
+
+/* Staggered card entrance */
+@keyframes yaru-rise {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.yaru-enter {
+	/* 'backwards' (not 'both'): a retained transform would become the
+	   containing block for position:fixed descendants (dropdown panels). */
+	animation: yaru-rise 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+.yaru-enter-1 {
+	animation-delay: 0.03s;
+}
+.yaru-enter-2 {
+	animation-delay: 0.09s;
+}
+.yaru-enter-3 {
+	animation-delay: 0.15s;
+}
+.yaru-enter-4 {
+	animation-delay: 0.21s;
+}
+.yaru-enter-5 {
+	animation-delay: 0.27s;
+}
+
+/* --- Mouse diagram hotspots --- */
+@keyframes hotspot-ping {
+	0% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+	80%,
+	100% {
+		transform: scale(2.4);
+		opacity: 0;
+	}
+}
+.hotspot-ping::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 9999px;
+	background: var(--ajazz-primary);
+	animation: hotspot-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.hotspot-dot {
+	transition:
+		transform 0.2s ease,
+		box-shadow 0.2s ease,
+		background-color 0.2s ease;
+}
+.hotspot-dot:hover {
+	transform: scale(1.5);
+	box-shadow: 0 0 16px var(--focus-ring);
+}
+.hotspot-dot:active {
+	transform: scale(1.15);
+}
+.hotspot-label {
+	transition:
+		border-color 0.2s ease,
+		color 0.2s ease,
+		background-color 0.2s ease;
+}
+button:hover > .hotspot-label,
+.hotspot-label:hover {
+	border-color: var(--ajazz-primary);
+	color: var(--text-primary);
+}
+
+/* --- Press feedback for all buttons --- */
+button:active:not(:disabled) {
+	transform: scale(0.97);
+}
+button:disabled {
+	cursor: not-allowed;
+}
+
+/* Range slider styling (Ubuntu orange, big easy-grab thumb) */
+input[type='range'] {
+	--slider-fill: 50%;
+}
+input[type='range']::-webkit-slider-runnable-track {
+	background: transparent;
+	border: none;
+}
+input[type='range']::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	margin-top: -4px;
+	background: #fff;
+	border: 2px solid var(--ajazz-primary);
+	border-radius: 50%;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+	cursor: grab;
+	transition: transform 0.15s ease;
+}
+input[type='range']:active::-webkit-slider-thumb {
+	cursor: grabbing;
+}
+
+input[type='range']:hover::-webkit-slider-thumb {
+	transform: scale(1.2);
+}
+
+input[type='range']::-moz-range-track {
+	background: transparent;
+	border: none;
+}
+input[type='range']::-moz-range-progress {
+	height: 8px;
+	border-radius: 9999px;
+	background: var(--ajazz-primary);
+}
+input[type='range']::-moz-range-thumb {
+	width: 12px;
+	height: 12px;
+	background: #fff;
+	border: 2px solid var(--ajazz-primary);
+	border-radius: 50%;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+	cursor: grab;
+	transition: transform 0.15s ease;
+}
+
+input[type='range']:hover::-moz-range-thumb {
+	transform: scale(1.2);
+}
+
+/* Native vertical sliders (DPI stages): no rotate hack, thumb stays upright */
+input[type='range'].dpi-vertical {
+	writing-mode: vertical-lr;
+	direction: rtl;
+	width: 12px;
+	height: 7rem;
+	border-radius: 9999px;
+}
+input[type='range'].dpi-vertical::-webkit-slider-thumb {
+	margin: 0;
+}
+
+/* Number inputs: hide native spinners (dark theme has no clean rendering for them) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type='number'] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* Ubuntu-style checkbox / color input */
+input[type='checkbox'] {
+	accent-color: var(--ajazz-primary);
+}
+/* Color swatch: strip native bevel, keep a clean rounded swatch */
+input[type='color'] {
+	padding: 0;
+	border: none;
+	background: none;
+}
+input[type='color']::-webkit-color-swatch-wrapper {
+	padding: 2px;
+}
+input[type='color']::-webkit-color-swatch {
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+}
+input[type='color']::-moz-color-swatch {
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+}
+
+/* Dark warm scrollbars */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: #201e1c;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #4f4a45;
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #e95420;
+}
