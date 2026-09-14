@@ -1,6 +1,14 @@
-# AJAZZ AJ159P Linux
+# AJAZZ AJ159P Driver for Linux
 
-<img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/d28040b6-5572-47c8-a675-22aafa0376ea" />
+[![Release](https://img.shields.io/github/v/release/q0HtHHftAS/Ajazz-AJ159P-Linux)](https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Desktop app to configure your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux (Ubuntu) — DPI, lighting, polling rate, button remap, sleep timer, battery. The official AJAZZ driver is Windows-only; this is a community reverse-engineered alternative built with Electron + Vue 3.
+
+> Keywords: ajazz aj159p driver linux, aj159 pro linux software, 249a:5c2f hidraw, ajazz linux configurator.
+
+<img width="1410" height="908" alt="AJAZZ AJ159P Linux app screenshot" src="https://github.com/user-attachments/assets/d28040b6-5572-47c8-a675-22aafa0376ea" />
+
+> DPI range 100–26000 (hardware-verified). Custom macros and key-response are not available on this receiver protocol.
 
 ---
 
