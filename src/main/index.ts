@@ -157,6 +157,9 @@ app.whenReady().then(() => {
 		autoUpdater.on('update-downloaded', (info) => {
 			broadcastUpdate({ status: 'downloaded', version: info.version });
 		});
+		autoUpdater.on('update-not-available', () => {
+			broadcastUpdate({ status: 'none' });
+		});
 		autoUpdater.on('error', (err: Error) => {
 			broadcastUpdate({ status: 'error', message: err.message });
 		});

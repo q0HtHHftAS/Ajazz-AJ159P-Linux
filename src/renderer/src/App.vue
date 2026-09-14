@@ -25,14 +25,35 @@ const refreshTick = ref(0);
 const pendingSync = ref(true);
 // Set by the manual refresh button; the next Dashboard 'refreshed' toasts.
 const expectRefresh = ref(false);
-const { toasts, removeToast, success: toastSuccess, error: toastError } = useToast();
+const { toasts, removeToast, success: toastSuccess, error: toastError, info: toastInfo } = useToast();
 const { t, locale } = useI18n();
 const connectionError = ref('');
 // App update state fed by the main process (production builds only).
-const updateState = ref<{ status: string; percent?: number; version?: string } | null>(null);
+const updateState = ref<{ status: string; percent?: number; version?: string; message?: string } | null>(null);
 
 const quitAndInstall = () => {
 	void window.api.quitAndInstall().catch(() => undefined);
+};
+
+// True while waiting for the result of a manual (clicked) update check,
+// so only those surface toasts — background-check failures stay quiet.
+const manualCheck = ref(false);
+
+const checkManually = async () => {
+	manualCheck.value = true;
+	toastInfo(t('update.checking'));
+	try {
+		const result = await window.api.checkForUpdates();
+		if (!result.success) {
+			manualCheck.value = false;
+			toastError(result.error || t('update.failedRetry'));
+		}
+		// On success the outcome arrives via onUpdateStatus below.
+	} catch (err: unknown) {
+		manualCheck.value = false;
+		const error = err instanceof Error ? err : new Error(String(err));
+		toastError(error.message);
+	}
 };
 
 const isPermissionError = computed(() => {
@@ -217,10 +238,23 @@ onMounted(async () => {
 
 		window.api.onUpdateStatus((s) => {
 			if (s.status === 'downloaded') {
+				manualCheck.value = false;
 				updateState.value = s;
 				toastSuccess(t('update.ready', { version: s.version ?? '' }));
 			} else if (s.status === 'available' || s.status === 'progress') {
 				updateState.value = s;
+			} else if (s.status === 'none') {
+				updateState.value = null;
+				if (manualCheck.value) {
+					manualCheck.value = false;
+					toastInfo(t('update.latest'));
+				}
+			} else if (s.status === 'error') {
+				updateState.value = s;
+				if (manualCheck.value) {
+					manualCheck.value = false;
+					toastError(s.message || t('update.failedRetry'));
+				}
 			} else {
 				updateState.value = null;
 			}
@@ -320,6 +354,14 @@ onUnmounted(() => {
 			>
 				{{ $t('update.restart', { version: updateState.version ?? '' }) }}
 			</button>
+			<button
+				v-else-if="updateState && updateState.status === 'error'"
+				@click="checkManually"
+				class="hidden sm:block px-2.5 py-1 rounded-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 text-xs font-medium transition-all"
+				:title="updateState.message"
+			>
+				{{ $t('update.failedRetry') }}
+			</button>
 
 			<div v-if="isConnected" class="hidden sm:flex items-center gap-2">
 				<button
@@ -338,7 +380,13 @@ onUnmounted(() => {
 					:charging="isCharging"
 				/>
 			</div>
-			<span class="text-[10px] text-[var(--sidebar-text-dim)]">v{{ version }}</span>
+			<button
+				@click="checkManually"
+				class="text-[10px] text-[var(--sidebar-text-dim)] hover:text-[var(--text-secondary)] transition-colors"
+				:title="$t('update.checkNow')"
+			>
+				v{{ version }}
+			</button>
 		</header>
 
 		<!-- Main Content -->

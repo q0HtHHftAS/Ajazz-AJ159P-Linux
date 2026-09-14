@@ -192,6 +192,10 @@
 		"found": "Update {version} found",
 		"downloading": "Downloading update… {percent}%",
 		"ready": "Update {version} downloaded",
-		"restart": "Restart to install {version}"
+		"restart": "Restart to install {version}",
+		"checking": "Checking for updates…",
+		"latest": "Already on the latest version",
+		"failedRetry": "Update check failed — retry",
+		"checkNow": "Check for updates"
 	}
 }
