@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { BatteryMonitor } from './BatteryMonitor.js';
-import { findReceiverHidraw, openReceiverHidraw, type HidrawHandle } from './HidrawTransport.js';
+import { findAjazzReceivers, openReceiverHidraw, type FoundReceiver, type HidrawHandle } from './HidrawTransport.js';
 import { DpiBuilder, type DpiBuilderOptions } from '../protocols/DpiBuilder.js';
 import { DpiColorBuilder, type DpiColorBuilderOptions } from '../protocols/DpiColorBuilder.js';
 import { KeyTableBuilder, type ButtonPresetId } from '../protocols/KeyTableBuilder.js';
@@ -26,7 +26,17 @@ import {
 import { SensorBuilder } from '../protocols/SensorBuilder.js';
 import { RgbBuilder, type RgbBuilderOptions } from '../protocols/RgbBuilder.js';
 import { DriverError, TimeoutError } from '../errors.js';
-import { AJAZZ_VID, AJ159P_PID, type DeviceModel, type DpiConfig, type Logger, type RgbConfig } from '../types.js';
+import {
+	AJAZZ_VID,
+	AJAZZ_WIRED_VID,
+	AJ159P_PID,
+	AJ159P_WIRED_PID,
+	type ConnectionKind,
+	type DeviceModel,
+	type DpiConfig,
+	type Logger,
+	type RgbConfig,
+} from '../types.js';
 
 const defaultLogger: Logger = {
 	debug: (m, c) => console.debug({ time: new Date().toISOString(), level: 'debug', message: m, context: c }),
@@ -47,18 +57,22 @@ export interface AjazzAJ159POptions {
 	logger?: Logger;
 	/** Injected transport (tests). When omitted, the real hidraw node is used. */
 	transport?: { node: string; handle: HidrawHandle };
+	/** Physical connection kind (default wireless). */
+	connectionKind?: ConnectionKind;
 }
 
 /**
  * Driver for the AJAZZ AJ159P / AJ159 Pro gaming mouse over its 2.4 GHz
- * receiver (XCTECH 249a:5c2f, vendor interface MI_02).
+ * receiver (XCTECH 249a:5c2f) or USB cable (248a:5c2e), vendor interface
+ * MI_02 in both cases.
  *
  * All settings are 33-byte HID reports written to `/dev/hidraw`. Battery
- * level arrives as `C0` frames on the same node and is exposed through the
- * `batteryChange` event.
+ * level is polled via query `0x10` (plus `C0` frames when the mouse pushes
+ * them) and exposed through the `batteryChange` event.
  */
 export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 	readonly deviceModel: DeviceModel;
+	readonly connectionKind: ConnectionKind;
 	private _hidrawNode: string | null;
 	get hidrawNode(): string | null {
 		return this._hidrawNode;
@@ -81,27 +95,35 @@ export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 		super();
 		this.logger = options?.logger ?? defaultLogger;
 		this.deviceModel = options?.deviceModel ?? 'AJ159P';
+		this.connectionKind = options?.connectionKind ?? 'wireless';
 		this._hidrawNode = options?.transport?.node ?? null;
 		this.handle = options?.transport?.handle ?? null;
 		this.ownsHandle = options?.transport === undefined;
 	}
 
 	/**
-	 * Returns the receiver hidraw node when plugged in, without opening it.
+	 * Returns plugged-in AJ159P nodes without opening them (wireless first).
 	 */
-	static detectDevice(): { detected: boolean; node?: string } {
-		const node = findReceiverHidraw();
-		return node ? { detected: true, node } : { detected: false };
+	static detectDevices(): FoundReceiver[] {
+		return findAjazzReceivers();
 	}
 
-	open(): Promise<void> {
+	/**
+	 * Returns the first plugged-in AJ159P node without opening it.
+	 */
+	static detectDevice(): { detected: boolean; node?: string; kind?: ConnectionKind } {
+		const found = findAjazzReceivers()[0];
+		return found ? { detected: true, node: found.node, kind: found.kind } : { detected: false };
+	}
+
+	open(node?: string): Promise<void> {
 		this.logger.info(
 			`Searching for AJ159P receiver VID:${AJAZZ_VID.toString(16)} PID:${AJ159P_PID.toString(16)}...`,
 		);
 		if (!this.handle) {
-			const { node, handle } = openReceiverHidraw();
+			const { node: opened, handle } = openReceiverHidraw(node);
 			this.handle = handle;
-			this._hidrawNode = node;
+			this._hidrawNode = opened;
 		}
 		this.logger.info(`Using receiver node ${this.hidrawNode}...`);
 		this.isDeviceOpen = true;
@@ -121,7 +143,10 @@ export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 			this.emit('error', error);
 		});
 		this.batteryMonitor.startPolling(250);
-		this.startBatteryRefresh();
+		// Wired mode has no battery to track and the 30s device-info query
+		// would only waste a query slot — the monitor loop above still runs
+		// so query replies keep flowing via deliverFrame.
+		if (this.connectionKind === 'wireless') this.startBatteryRefresh();
 		this.logger.info('Device ready.');
 		return Promise.resolve();
 	}
@@ -230,6 +255,9 @@ export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 
 	getBatteryLevel(timeoutMs = 5000): Promise<number> {
 		this.checkIsOpen();
+		// Wired USB mode has no battery — report -1 immediately instead of
+		// burning a query slot on a reading the firmware cannot provide.
+		if (this.connectionKind === 'wired') return Promise.resolve(-1);
 		return this.queryReport(QUERY_DEVICE_INFO, timeoutMs).then(
 			(reply) => {
 				const info = parseDeviceInfoReply(reply);
@@ -409,12 +437,13 @@ export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 		hidrawNode: string | null;
 	} {
 		this.checkIsOpen();
+		const wired = this.connectionKind === 'wired';
 		return {
-			manufacturer: 'XCTECH',
+			manufacturer: wired ? 'AJAZZ' : 'XCTECH',
 			product: this.deviceModel === 'AJ159Pro' ? 'AJAZZ AJ159 Pro' : 'AJAZZ AJ159P',
-			vendorId: `0x${AJAZZ_VID.toString(16).padStart(4, '0')}`,
-			productId: `0x${AJ159P_PID.toString(16).padStart(4, '0')}`,
-			connectionMode: 'Wireless (2.4GHz)',
+			vendorId: `0x${(wired ? AJAZZ_WIRED_VID : AJAZZ_VID).toString(16).padStart(4, '0')}`,
+			productId: `0x${(wired ? AJ159P_WIRED_PID : AJ159P_PID).toString(16).padStart(4, '0')}`,
+			connectionMode: wired ? 'Wired (USB)' : 'Wireless (2.4GHz)',
 			hidrawNode: this.hidrawNode,
 		};
 	}

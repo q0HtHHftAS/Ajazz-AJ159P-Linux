@@ -12,6 +12,8 @@ interface AppSettings {
 	language: string;
 	pollingRate: number;
 	sleepMinutes: number;
+	autoSync: boolean;
+	buttons: [string, string, string, string, string];
 	dpi: {
 		selected: number;
 		values: [number, number, number, number, number, number];
@@ -28,8 +30,14 @@ interface AppSettings {
 declare global {
 	interface Window {
 		api: {
-			detectDevice: () => Promise<{ detected: boolean; node?: string }>;
-			connectDevice: (params?: { model?: string }) => Promise<{ success: boolean; error?: string }>;
+			detectDevice: () => Promise<{ detected: boolean; node?: string; kind?: string }>;
+			detectDevices: () => Promise<{ node: string; kind: string }[]>;
+			connectDevice: (params?: {
+				model?: string;
+				kind?: string;
+			}) => Promise<{ success: boolean; error?: string; kind?: string }>;
+			disconnectDevice: () => Promise<{ success: boolean }>;
+			getConnectionKind: () => Promise<'wireless' | 'wired'>;
 			getBattery: () => Promise<number>;
 			setDpi: (config: unknown) => Promise<number>;
 			setRgb: (config: unknown) => Promise<number>;
@@ -53,6 +61,11 @@ declare global {
 			getDeviceInfo: () => Promise<unknown>;
 			getDeviceModel: () => Promise<'AJ159P' | 'AJ159Pro'>;
 			getDeviceCapabilities: () => Promise<Record<string, boolean>>;
+			checkForUpdates: () => Promise<{ success: boolean; version?: string; error?: string }>;
+			quitAndInstall: () => Promise<void>;
+			onUpdateStatus: (
+				callback: (status: { status: string; percent?: number; version?: string; message?: string }) => void,
+			) => () => void;
 			onBatteryUpdated: (callback: (level: number) => void) => () => void;
 		};
 	}

@@ -10,7 +10,7 @@ Core driver classes: `AjazzAJ159P` (main driver), `BatteryMonitor` (C0-frame pol
 src/main/driver/core/
 ├── AjazzAJ159P.ts      # Main driver class — EventEmitter, hidraw reports, battery
 ├── BatteryMonitor.ts   # C0-frame polling — parseBatteryFrame, emits batteryChange
-└── HidrawTransport.ts  # findReceiverHidraw, openReceiverHidraw, HidrawHandle
+└── HidrawTransport.ts  # findAjazzReceivers, openReceiverHidraw, HidrawHandle
 ```
 
 ## WHERE TO LOOK
@@ -20,7 +20,7 @@ src/main/driver/core/
 | All device commands (DPI, RGB, polling, sleep, buttons) | AjazzAJ159P.ts | `setDpi()`, `setRgb()`, `setPollingRate()`, `setSleepMinutes()`, `setKeySlot(s)()`, `reset()` |
 | Battery level / live updates | AjazzAJ159P.ts | `getBatteryLevel()`, `onBatteryChange()` |
 | Battery polling internals | BatteryMonitor.ts | `parseBatteryFrame()`, `startPolling()` |
-| hidraw discovery | HidrawTransport.ts | `findReceiverHidraw()` (MI_02 scan) |
+| hidraw discovery | HidrawTransport.ts | `findAjazzReceivers()` (wireless+wired MI_02 scan) |
 | Device info | AjazzAJ159P.ts | `getDeviceInfo()` |
 
 ## CONVENTIONS

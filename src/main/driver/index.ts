@@ -2,8 +2,8 @@ export { AjazzAJ159P } from './core/AjazzAJ159P.js';
 export type { AjazzAJ159PEvents, AjazzAJ159POptions } from './core/AjazzAJ159P.js';
 export { BatteryMonitor, parseBatteryFrame } from './core/BatteryMonitor.js';
 export type { BatteryMonitorEvents } from './core/BatteryMonitor.js';
-export { findReceiverHidraw, openReceiverHidraw } from './core/HidrawTransport.js';
-export type { HidrawHandle } from './core/HidrawTransport.js';
+export { findReceiverHidraw, findAjazzReceivers, openReceiverHidraw } from './core/HidrawTransport.js';
+export type { HidrawHandle, FoundReceiver } from './core/HidrawTransport.js';
 export {
 	DpiBuilder,
 	DEFAULT_DPI_VALUES,
@@ -39,6 +39,6 @@ export {
 } from './protocols/Queries.js';
 export type { DeviceInfoReply, DpiColorReply, DpiTableReply, LedModeReply } from './protocols/Queries.js';
 
-export { AJAZZ_VID, AJ159P_PID, REPORT_LENGTH } from './types.js';
-export type { DeviceModel, DpiConfig, RgbConfig, RgbMode, Logger, LogLevel } from './types.js';
+export { AJAZZ_VID, AJ159P_PID, AJAZZ_WIRED_VID, AJ159P_WIRED_PID, REPORT_LENGTH } from './types.js';
+export type { ConnectionKind, DeviceModel, DpiConfig, RgbConfig, RgbMode, Logger, LogLevel } from './types.js';
 export { DriverError, ParamsError, DeviceError, InterfaceError, TimeoutError } from './errors.js';

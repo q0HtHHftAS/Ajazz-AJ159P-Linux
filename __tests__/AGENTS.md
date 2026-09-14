@@ -3,7 +3,7 @@
 **Parent:** ../AGENTS.md
 
 ## OVERVIEW
-89 tests across 12 files in `__tests__/`. Runner: `bun test` (Bun's built-in `bun:test`). No config files — relies on Bun's default `*.test.ts` discovery.
+94 tests across 13 files in `__tests__/`. Runner: `bun test` (Bun's built-in `bun:test`). No config files — relies on Bun's default `*.test.ts` discovery.
 
 ## STRUCTURE
 ```
@@ -13,6 +13,7 @@ __tests__/
 ├── SensorBuilder.test.ts       # 5 tests — live-reply RMW, golden hex
 ├── KeyTableBuilder.test.ts     # 7 tests — live-reply RMW, presets, golden hex
 ├── Queries.test.ts             # 7 tests — query build + DPI/battery/LED/colour reply parse
+├── HidrawTransport.test.ts   # 5 tests — fake sysfs discovery (wireless/wired/MI filter)
 ├── DpiColorBuilder.test.ts   # 6 tests — golden hex, validation
 ├── BatteryMonitor.test.ts    # 7 tests — parseBatteryFrame + polling (fake timers)
 ├── DpiBuilder.test.ts        # 8 tests — golden hex, validation
@@ -50,7 +51,7 @@ __tests__/
 
 ## COMMANDS
 ```bash
-bun test                              # all 89 tests
+bun test                              # all 94 tests
 bun test __tests__/AjazzAJ159P.test.ts
 bun test __tests__/BatteryMonitor.test.ts
 bun test --coverage                   # coverage/ (gitignored)

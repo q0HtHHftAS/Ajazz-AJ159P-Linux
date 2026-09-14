@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { Zap, Info, MousePointer2 } from 'lucide-vue-next';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Zap, Cable, Info, MousePointer2, RotateCw } from 'lucide-vue-next';
 
 import Dashboard from './components/Dashboard.vue';
 import BatteryIndicator from './components/widgets/BatteryIndicator.vue';
@@ -14,30 +14,59 @@ import packageInfo from '../../../package.json';
 const version = packageInfo.version;
 const isConnected = ref(false);
 const deviceModel = ref<'AJ159P' | 'AJ159Pro'>('AJ159P');
+const connectionKind = ref<'wireless' | 'wired'>('wireless');
+const availableKinds = ref<('wireless' | 'wired')[]>([]);
+const switching = ref(false);
 const batteryLevel = ref(-1);
-const { toasts, removeToast } = useToast();
+// Guards overlapping connects (manual + hot-plug poll).
+const busy = ref(false);
+// Dashboard remount key part + whether the fresh mount may auto-sync.
+const refreshTick = ref(0);
+const pendingSync = ref(true);
+// Set by the manual refresh button; the next Dashboard 'refreshed' toasts.
+const expectRefresh = ref(false);
+const { toasts, removeToast, success: toastSuccess, error: toastError } = useToast();
 const { t, locale } = useI18n();
 const connectionError = ref('');
+// App update state fed by the main process (production builds only).
+const updateState = ref<{ status: string; percent?: number; version?: string } | null>(null);
+
+const quitAndInstall = () => {
+	void window.api.quitAndInstall().catch(() => undefined);
+};
 
 const isPermissionError = computed(() => {
 	const msg = connectionError.value.toLowerCase();
 	return msg.includes('permission') || msg.includes('eacces') || msg.includes('access');
 });
 
-const connect = async () => {
+const connect = async (kind: 'wireless' | 'wired') => {
+	await doConnect(kind, true);
+};
+
+/** Shared connect flow for manual, auto and hot-plug connects. */
+const doConnect = async (kind: 'wireless' | 'wired', sync: boolean): Promise<boolean> => {
+	if (busy.value) return false;
+	busy.value = true;
 	connectionError.value = '';
 	try {
 		if (!window.api) throw new Error('IPC API not found.');
-		const result = await window.api.connectDevice({});
+		const result = await window.api.connectDevice({ kind });
 		if (result.success) {
+			pendingSync.value = sync;
+			refreshTick.value++;
 			await finalizeConnection();
-		} else {
-			connectionError.value = result.error || 'Unknown error';
+			return true;
 		}
+		connectionError.value = result.error || 'Unknown error';
+		return false;
 	} catch (err: unknown) {
 		const error = err instanceof Error ? err : new Error(String(err));
 		console.error('IPC Error:', error);
 		connectionError.value = `Connection Error: ${error.message}`;
+		return false;
+	} finally {
+		busy.value = false;
 	}
 };
 
@@ -45,10 +74,128 @@ const finalizeConnection = async () => {
 	isConnected.value = true;
 	const model = await window.api.getDeviceModel();
 	deviceModel.value = model;
+	try {
+		connectionKind.value = await window.api.getConnectionKind();
+	} catch {
+		connectionKind.value = 'wireless';
+	}
+	await refreshDevices();
 	await updateBattery();
 };
 
+const refreshDevices = async () => {
+	try {
+		const list = await window.api.detectDevices();
+		if (Array.isArray(list) && list.length > 0) {
+			availableKinds.value = [...new Set(list.map((d) => (d.kind === 'wired' ? 'wired' : 'wireless')))];
+			return;
+		}
+	} catch {
+		// fall through to single-device fallback below
+	}
+	try {
+		const detection = await window.api.detectDevice();
+		availableKinds.value = detection.detected ? [detection.kind === 'wired' ? 'wired' : 'wireless'] : [];
+	} catch {
+		availableKinds.value = [];
+	}
+};
+
+const otherKind = computed(() => (connectionKind.value === 'wired' ? 'wireless' : 'wired'));
+const canSwitch = computed(() => availableKinds.value.includes(otherKind.value));
+
+// Charging = on wireless while the USB cable is also plugged in.
+const isCharging = computed(
+	() => isConnected.value && connectionKind.value === 'wireless' && availableKinds.value.includes('wired'),
+);
+
+const switchConnection = async () => {
+	if (switching.value || !canSwitch.value) return;
+	switching.value = true;
+	try {
+		await doConnect(otherKind.value, true);
+	} finally {
+		switching.value = false;
+	}
+};
+
+/** Manual header refresh: re-read devices, battery and the full hardware state. */
+const refreshAll = async () => {
+	if (!isConnected.value || busy.value) return;
+	expectRefresh.value = true;
+	pendingSync.value = false;
+	refreshTick.value++;
+	await refreshDevices();
+	await updateBattery();
+};
+
+const onDashboardRefreshed = () => {
+	if (!expectRefresh.value) return;
+	expectRefresh.value = false;
+	toastSuccess(t('connection.refreshed'));
+};
+
+/** Quietly drop to the connect screen after the device is unplugged. */
+const disconnectQuiet = async () => {
+	try {
+		await window.api.disconnectDevice();
+	} catch {
+		// best effort — the node is gone anyway
+	}
+	isConnected.value = false;
+	batteryLevel.value = -1;
+	toastError(t('connection.disconnected'));
+};
+
+/** Hot-plug poll (sysfs only, no radio wake): auto-connect, follow mode changes. */
+const emptyPolls = ref(0);
+
+const pollDevices = async () => {
+	if (busy.value || switching.value || !window.api) return;
+	let kinds: ('wireless' | 'wired')[] = [];
+	try {
+		const list = await window.api.detectDevices();
+		if (Array.isArray(list)) kinds = list.map((d) => (d.kind === 'wired' ? 'wired' : 'wireless'));
+	} catch {
+		return;
+	}
+	if (kinds.length > 0) emptyPolls.value = 0;
+	if (!isConnected.value) {
+		// Auto-connect on plug-in — but never fight a manual error state.
+		if (kinds.length > 0 && !connectionError.value) {
+			const kind = kinds[0] ?? 'wireless';
+			if (await doConnect(kind, true)) toastSuccess(t('connection.connected'));
+		}
+		return;
+	}
+	if (kinds.length === 0) {
+		// Debounce: one empty poll can be a transient sysfs blip or a loose
+		// receiver — only drop the UI after two in a row (4s).
+		emptyPolls.value++;
+		if (emptyPolls.value < 2) return;
+		emptyPolls.value = 0;
+		await disconnectQuiet();
+		return;
+	}
+	if (!kinds.includes(connectionKind.value)) {
+		// Current mode unplugged while the other is present — follow it.
+		await doConnect(kinds[0] ?? 'wireless', true);
+	}
+};
+
+const handleFocus = () => {
+	void refreshDevices();
+	if (isConnected.value) void updateBattery();
+};
+
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
 const updateBattery = async () => {
+	// Wired USB mode has no battery — skip the query entirely.
+	if (connectionKind.value === 'wired') {
+		batteryLevel.value = -1;
+		return;
+	}
 	try {
 		batteryLevel.value = await window.api.getBattery();
 	} catch (err) {
@@ -63,7 +210,20 @@ onMounted(async () => {
 
 	try {
 		window.api.onBatteryUpdated((level: number) => {
+			// Ignore stray wireless readings while on wired USB.
+			if (connectionKind.value === 'wired') return;
 			batteryLevel.value = level;
+		});
+
+		window.api.onUpdateStatus((s) => {
+			if (s.status === 'downloaded') {
+				updateState.value = s;
+				toastSuccess(t('update.ready', { version: s.version ?? '' }));
+			} else if (s.status === 'available' || s.status === 'progress') {
+				updateState.value = s;
+			} else {
+				updateState.value = null;
+			}
 		});
 
 		await window.api.getSettings();
@@ -76,16 +236,25 @@ onMounted(async () => {
 	try {
 		const detection = await window.api.detectDevice();
 		if (detection.detected) {
-			const result = await window.api.connectDevice({});
-			if (result.success) {
-				await finalizeConnection();
-			} else if (result.error) {
-				connectionError.value = result.error;
-			}
+			await doConnect(detection.kind === 'wired' ? 'wired' : 'wireless', true);
+		} else {
+			await refreshDevices();
 		}
 	} catch {
 		// silently fail — manual connect is available
 	}
+
+	// Live updates: hot-plug poll + cable plug/unplug on focus.
+	pollTimer = setInterval(() => void pollDevices(), 2000);
+	window.addEventListener('focus', handleFocus);
+});
+
+onUnmounted(() => {
+	if (pollTimer) {
+		clearInterval(pollTimer);
+		pollTimer = null;
+	}
+	window.removeEventListener('focus', handleFocus);
 });
 </script>
 
@@ -111,14 +280,63 @@ onMounted(async () => {
 				<span
 					class="px-2.5 py-1 rounded-full bg-[#E95420]/15 border border-[#E95420]/40 text-[#f9a88a] font-medium"
 				>
-					{{ $t('overview.wireless') }}
+					{{ connectionKind === 'wired' ? $t('connection.wired') : $t('overview.wireless') }}
 				</span>
+				<button
+					v-if="canSwitch"
+					@click="switchConnection"
+					:disabled="switching"
+					class="px-2.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-card)] text-[var(--text-secondary)] font-medium hover:border-[#E95420]/60 hover:text-[var(--text-primary)] transition-all disabled:opacity-40"
+					:title="
+						connectionKind === 'wired' ? $t('connection.switchToWireless') : $t('connection.switchToWired')
+					"
+				>
+					{{
+						switching
+							? '…'
+							: connectionKind === 'wired'
+								? $t('connection.switchToWireless')
+								: $t('connection.switchToWired')
+					}}
+				</button>
 			</div>
 
 			<div class="flex-1" />
 
-			<div v-if="isConnected" class="hidden sm:block">
-				<BatteryIndicator :level="batteryLevel" :connected="isConnected" />
+			<button
+				v-if="updateState && (updateState.status === 'available' || updateState.status === 'progress')"
+				class="hidden sm:block px-2.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-card)] text-[var(--text-secondary)] text-xs font-medium cursor-default"
+			>
+				{{
+					updateState.status === 'progress'
+						? $t('update.downloading', { percent: updateState.percent ?? 0 })
+						: $t('update.found', { version: updateState.version ?? '' })
+				}}
+			</button>
+			<button
+				v-else-if="updateState && updateState.status === 'downloaded'"
+				@click="quitAndInstall"
+				class="hidden sm:block px-2.5 py-1 rounded-full bg-[#E95420] hover:bg-[#C74416] text-white text-xs font-medium transition-all"
+			>
+				{{ $t('update.restart', { version: updateState.version ?? '' }) }}
+			</button>
+
+			<div v-if="isConnected" class="hidden sm:flex items-center gap-2">
+				<button
+					@click="refreshAll"
+					:disabled="busy"
+					class="p-1.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all disabled:opacity-40"
+					:title="$t('connection.refreshNow')"
+					aria-label="Refresh device state"
+				>
+					<RotateCw class="w-4 h-4" :class="busy ? 'animate-spin' : ''" />
+				</button>
+				<BatteryIndicator
+					:level="batteryLevel"
+					:connected="isConnected"
+					:kind="connectionKind"
+					:charging="isCharging"
+				/>
 			</div>
 			<span class="text-[10px] text-[var(--sidebar-text-dim)]">v{{ version }}</span>
 		</header>
@@ -142,10 +360,10 @@ onMounted(async () => {
 					{{ $t('connection.description') }}
 				</p>
 
-				<div class="yaru-enter yaru-enter-3 w-full max-w-sm">
+				<div class="yaru-enter yaru-enter-3 grid grid-cols-2 gap-4 w-full max-w-xl">
 					<button
-						@click="connect"
-						class="bg-[var(--connection-card-bg)] hover:bg-[var(--connection-card-hover)] hover:border-[#E95420]/60 hover:-translate-y-1 p-5 rounded-xl border border-[var(--connection-card-border)] transition-all group flex flex-col items-center w-full"
+						@click="connect('wireless')"
+						class="bg-[var(--connection-card-bg)] hover:bg-[var(--connection-card-hover)] hover:border-[#E95420]/60 hover:-translate-y-1 p-5 rounded-xl border border-[var(--connection-card-border)] transition-all group flex flex-col items-center"
 						aria-label="Connect via 2.4GHz wireless receiver"
 					>
 						<Zap
@@ -158,6 +376,19 @@ onMounted(async () => {
 							$t('connection.adapterDesc')
 						}}</span>
 					</button>
+					<button
+						@click="connect('wired')"
+						class="bg-[var(--connection-card-bg)] hover:bg-[var(--connection-card-hover)] hover:border-[#E95420]/60 hover:-translate-y-1 p-5 rounded-xl border border-[var(--connection-card-border)] transition-all group flex flex-col items-center"
+						aria-label="Connect via USB cable"
+					>
+						<Cable
+							class="w-8 h-8 mb-3 text-[var(--connection-card-text)] group-hover:text-[#E95420] transition-colors"
+						/>
+						<span class="block font-semibold text-[var(--text-primary)]">{{ $t('connection.wired') }}</span>
+						<span class="block text-xs text-[var(--text-muted)] mt-1 leading-relaxed">{{
+							$t('connection.wiredDesc')
+						}}</span>
+					</button>
 				</div>
 
 				<div v-if="connectionError" class="mt-6 w-full max-w-sm space-y-3">
@@ -168,7 +399,12 @@ onMounted(async () => {
 					>
 						{{ $t('connection.udevTip') }}
 					</div>
-					<BaseButton @click="connect" variant="green" class="w-full" aria-label="Retry connection">
+					<BaseButton
+						@click="connect(connectionKind)"
+						variant="green"
+						class="w-full"
+						aria-label="Retry connection"
+					>
 						{{ $t('connection.retry') }}
 					</BaseButton>
 				</div>
@@ -184,10 +420,14 @@ onMounted(async () => {
 
 			<Dashboard
 				v-else
+				:key="`${connectionKind}:${refreshTick}`"
 				:isConnected="isConnected"
 				:deviceModel="deviceModel"
+				:connectionKind="connectionKind"
 				:batteryLevel="batteryLevel"
+				:syncOnMount="pendingSync"
 				@reset-complete="isConnected = false"
+				@refreshed="onDashboardRefreshed"
 			/>
 
 			<ToastStack :toasts="toasts" @remove="removeToast" />

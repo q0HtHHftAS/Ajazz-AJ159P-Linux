@@ -9,6 +9,7 @@
 		"pollingSettings": "Polling Rate",
 		"sleepSettings": "Sleep Timer",
 		"buttonSettings": "Button Remap",
+		"syncSettings": "Connection Sync",
 		"activeStage": "Active: stage {stage} / 6"
 	},
 	"settings": "Settings",
@@ -41,14 +42,33 @@
 	},
 	"connection": {
 		"title": "Connect your device",
-		"description": "Plug in the 2.4GHz receiver and connect to start configuring your AJ159P.",
+		"description": "Plug in the 2.4GHz receiver or USB cable, then connect to start configuring your AJ159P.",
 		"adapter": "2.4G Receiver",
 		"adapterDesc": "Connect via the 2.4GHz wireless receiver (249a:5c2f)",
 		"forceRefresh": "Force App Refresh",
 		"retry": "Retry Connection",
 		"disconnected": "Device Disconnected",
+		"connected": "Device connected",
+		"refreshed": "Device state refreshed",
+		"refreshNow": "Refresh device state",
 		"errorTip": "Tip: If device is busy, try unplugging and replugging it.",
-		"udevTip": "Permission issue detected. Ensure udev rules are configured (see README) or run the app with appropriate permissions."
+		"udevTip": "Permission issue detected. Ensure udev rules are configured (see README) or run the app with appropriate permissions.",
+		"wired": "Wired USB",
+		"wiredDesc": "Connect via USB cable (248a:5c2e)",
+		"wiredCharging": "Wired USB — powered by cable, no battery to report",
+		"charging": "Charging via USB",
+		"full": "Full",
+		"switchToWired": "Switch to Wired",
+		"switchToWireless": "Switch to 2.4G",
+		"separateProfiles": "Wired and wireless keep separate profiles on the mouse — the other mode keeps its own DPI, lighting and buttons.",
+		"syncSettings": "Apply current settings to this mode",
+		"syncing": "Applying settings to this mode...",
+		"synced": "Settings applied to this mode!",
+		"syncError": "Error",
+		"syncConfirm": "Apply the current DPI, lighting, polling, sleep and button settings to this connection mode? The mouse stores wired and wireless profiles separately.",
+		"autoSync": "Auto Sync on connect",
+		"syncedParts": "Synced {parts} to {mode}",
+		"syncFailedParts": "Auto Sync failed for {parts} ({mode})"
 	},
 	"preferences": {
 		"title": "User Preferences",
@@ -142,6 +162,8 @@
 	"polling": {
 		"applying": "Applying polling rate...",
 		"applied": "Polling rate applied!",
+		"verified": "Polling {rate}Hz active on device",
+		"unverified": "Polling write sent, but device reports {got}Hz",
 		"error": "Error"
 	},
 	"sleep": {
@@ -152,7 +174,10 @@
 	"buttons": {
 		"applying": "Applying button mapping...",
 		"applied": "Button mapping applied!",
-		"error": "Error"
+		"verified": "Button mapping applied — verified on device",
+		"notAccepted": "Device did not accept slots: {slots}",
+		"error": "Error",
+		"customKept": "Custom mapping on the device — left untouched."
 	},
 	"reset": {
 		"button": "Reset Device",
@@ -162,5 +187,11 @@
 		"failed": "Reset failed",
 		"dangerZone": "Danger Zone",
 		"dangerZoneDesc": "Reset all settings to factory defaults. This cannot be undone."
+	},
+	"update": {
+		"found": "Update {version} found",
+		"downloading": "Downloading update… {percent}%",
+		"ready": "Update {version} downloaded",
+		"restart": "Restart to install {version}"
 	}
 }

@@ -18,7 +18,9 @@ describe('preload', () => {
 			const source = getSource();
 			const expectedMethods = [
 				'detectDevice',
+				'detectDevices',
 				'connectDevice',
+				'disconnectDevice',
 				'getBattery',
 				'setDpi',
 				'setRgb',
@@ -41,7 +43,11 @@ describe('preload', () => {
 				'saveSettings',
 				'getDeviceInfo',
 				'getDeviceModel',
+				'getConnectionKind',
 				'getDeviceCapabilities',
+				'checkForUpdates',
+				'quitAndInstall',
+				'onUpdateStatus',
 				'onBatteryUpdated',
 			];
 

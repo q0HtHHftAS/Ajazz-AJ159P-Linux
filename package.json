@@ -1,6 +1,6 @@
 {
 	"name": "ajazz-aj159p",
-	"version": "0.1.0-beta",
+	"version": "0.1.5",
 	"description": "Desktop configuration app for the AJAZZ AJ159P / AJ159 Pro gaming mouse.",
 	"desktopName": "ajazz-aj159p",
 	"author": {
@@ -54,7 +54,15 @@
 			"category": "Settings",
 			"icon": "assets/ajazz-aj159p.png",
 			"syncDesktopName": true
-		}
+		},
+		"publish": [
+			{
+				"provider": "github",
+				"owner": "q0HtHHftAS",
+				"repo": "Ajazz-AJ159P-Linux",
+				"releaseType": "release"
+			}
+		]
 	},
 	"lint-staged": {
 		"*.{ts,js,json}": [
@@ -64,6 +72,7 @@
 	},
 	"dependencies": {
 		"@electron-toolkit/utils": "^4.0.0",
+		"electron-updater": "^6.8.9",
 		"lucide-vue-next": "^1.0.0",
 		"vue": "^3.5.41",
 		"vue-i18n": "^11.4.8"

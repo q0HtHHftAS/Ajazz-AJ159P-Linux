@@ -14,7 +14,7 @@ export function useToast(): {
 	toasts: typeof toasts;
 	addToast: (message: string, type: Toast['type'], duration?: number) => void;
 	success: (message: string) => void;
-	error: (message: string) => void;
+	error: (message: string, duration?: number) => void;
 	info: (message: string) => void;
 	removeToast: (id: number) => void;
 } {
@@ -29,7 +29,8 @@ export function useToast(): {
 	};
 
 	const success = (message: string): void => addToast(message, 'success');
-	const error = (message: string): void => addToast(message, 'error');
+	// Errors linger longer (5s) so they catch the eye next to inline banners.
+	const error = (message: string, duration = 5000): void => addToast(message, 'error', duration);
 	const info = (message: string): void => addToast(message, 'info');
 
 	const removeToast = (id: number): void => {

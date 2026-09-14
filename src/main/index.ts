@@ -1,8 +1,9 @@
 import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { autoUpdater } from 'electron-updater';
 import { AjazzAJ159P } from './driver/index.js';
-import type { DeviceModel, RgbMode } from './driver/types.js';
+import type { ConnectionKind, DeviceModel, RgbMode } from './driver/types.js';
 import { DPI_MAX, DPI_MIN, DPI_STEP, type DpiBuilderOptions } from './driver/protocols/DpiBuilder.js';
 import type { RgbBuilderOptions } from './driver/protocols/RgbBuilder.js';
 import { KeyTableBuilder, KEY_SLOT_COUNT, type ButtonPresetId } from './driver/protocols/KeyTableBuilder.js';
@@ -13,6 +14,7 @@ import * as settingsManager from './storage/settingsManager.js';
 
 let driver: AjazzAJ159P | null = null;
 let deviceModel: DeviceModel = 'AJ159P';
+let connectionKind: ConnectionKind = 'wireless';
 
 function createWindow(): void {
 	// Force dark decorations so the native title bar is black per Yaru-dark theme,
@@ -131,15 +133,81 @@ app.whenReady().then(() => {
 		optimizer.watchWindowShortcuts(window);
 	});
 
+	// --- Auto-update (production only; dev builds have no update metadata) ---
+	const broadcastUpdate = (payload: {
+		status: string;
+		percent?: number;
+		version?: string;
+		message?: string;
+	}): void => {
+		BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('update-status', payload));
+	};
+
+	if (app.isPackaged) {
+		autoUpdater.autoDownload = true;
+		autoUpdater.on('checking-for-update', () => {
+			broadcastUpdate({ status: 'checking' });
+		});
+		autoUpdater.on('update-available', (info) => {
+			broadcastUpdate({ status: 'available', version: info.version });
+		});
+		autoUpdater.on('download-progress', (progress) => {
+			broadcastUpdate({ status: 'progress', percent: Math.round(progress.percent) });
+		});
+		autoUpdater.on('update-downloaded', (info) => {
+			broadcastUpdate({ status: 'downloaded', version: info.version });
+		});
+		autoUpdater.on('error', (err: Error) => {
+			broadcastUpdate({ status: 'error', message: err.message });
+		});
+		// Delay slightly so the window is up before the silent check runs.
+		setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 5000);
+	}
+
+	ipcMain.handle('check-for-updates', async () => {
+		if (!app.isPackaged) return { success: false, error: 'Updates are only available in packaged builds' };
+		try {
+			const result = await autoUpdater.checkForUpdates();
+			return { success: true, version: result?.updateInfo.version };
+		} catch (error: unknown) {
+			const err = error instanceof Error ? error : new Error(String(error));
+			return { success: false, error: err.message };
+		}
+	});
+
+	ipcMain.handle('quit-and-install', () => {
+		autoUpdater.quitAndInstall(false, true);
+	});
+
 	// IPC Handlers
 	ipcMain.handle('detect-device', () => AjazzAJ159P.detectDevice());
 
-	ipcMain.handle('connect-device', async (_, params?: { model?: DeviceModel }) => {
+	ipcMain.handle('detect-devices', () => AjazzAJ159P.detectDevices());
+
+	ipcMain.handle('disconnect-device', async () => {
+		if (driver) {
+			const closing = driver;
+			driver = null;
+			try {
+				await closing.close();
+			} catch (err) {
+				console.error('Error during driver disconnect:', err);
+			}
+		}
+		return { success: true };
+	});
+
+	ipcMain.handle('connect-device', async (_, params?: { model?: DeviceModel; kind?: ConnectionKind }) => {
 		try {
 			const model: DeviceModel = params?.model === 'AJ159Pro' ? 'AJ159Pro' : 'AJ159P';
+			const kind: ConnectionKind = params?.kind === 'wired' ? 'wired' : 'wireless';
+			const found = AjazzAJ159P.detectDevices().find((r) => r.kind === kind) ?? AjazzAJ159P.detectDevices()[0];
+			if (!found) {
+				return { success: false, error: 'No AJ159P receiver or USB cable detected' };
+			}
 			const oldDriver = driver;
-			const newDriver = new AjazzAJ159P({ deviceModel: model });
-			await newDriver.open();
+			const newDriver = new AjazzAJ159P({ deviceModel: model, connectionKind: found.kind });
+			await newDriver.open(found.node);
 
 			newDriver.on('batteryChange', (level) => {
 				const windows = BrowserWindow.getAllWindows();
@@ -153,7 +221,8 @@ app.whenReady().then(() => {
 			// eslint-disable-next-line require-atomic-updates
 			driver = newDriver;
 			deviceModel = model;
-			return { success: true };
+			connectionKind = found.kind;
+			return { success: true, kind: found.kind };
 		} catch (error: unknown) {
 			const err = error instanceof Error ? error : new Error(String(error));
 			console.error('Connection failed:', err);
@@ -163,6 +232,8 @@ app.whenReady().then(() => {
 
 	ipcMain.handle('get-battery', async () => {
 		if (!driver) return -1;
+		// Wired USB mode has no battery — skip the device-info query entirely.
+		if (connectionKind === 'wired') return -1;
 		try {
 			const level = await driver.getBatteryLevel();
 			return level;
@@ -316,6 +387,8 @@ app.whenReady().then(() => {
 	});
 
 	ipcMain.handle('get-device-model', () => deviceModel);
+
+	ipcMain.handle('get-connection-kind', () => connectionKind);
 
 	ipcMain.handle('get-device-capabilities', () => ({
 		dpi: true,
