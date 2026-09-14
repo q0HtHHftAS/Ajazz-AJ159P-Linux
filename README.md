@@ -2,113 +2,105 @@
 
 [![Release](https://img.shields.io/github/v/release/q0HtHHftAS/Ajazz-AJ159P-Linux)](https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Desktop app to configure your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux (Ubuntu) — DPI, lighting, polling rate, button remap, sleep timer, battery. The official AJAZZ driver is Windows-only; this is a community reverse-engineered alternative built with Electron + Vue 3.
-
-> Keywords: ajazz aj159p driver linux, aj159 pro linux software, 249a:5c2f hidraw, ajazz linux configurator.
->
-> Connects over the 2.4GHz receiver (249a:5c2f) or USB cable (248a:5c2e) — wired and wireless keep separate on-device profiles.
+โปรแกรมตั้งค่าเมาส์เกมมิ่ง **AJAZZ AJ159P / AJ159 Pro** บน Linux — DPI, ไฟ, polling rate, รีแมปปุ่ม, sleep timer, แบตเตอรี่ ผ่านตัวรับ 2.4GHz หรือสาย USB (ไดรเวอร์ศูนย์มีแค่ Windows อันนี้ทำขึ้นมาทดแทน)
 
 <img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/e47e255c-612d-4bea-89b6-fe7e0a3489cc" />
 
-> DPI range 100–26000 (hardware-verified). Custom macros and key-response are not available on this receiver protocol.
+> รองรับ **Ubuntu** (ทดสอบบน Ubuntu 26.04) — ดิสโทรอื่นไม่รับประกันว่าเปิดติด/ใช้งานได้
+> DPI 100–26000 (เทสกับเครื่องจริงแล้ว) โหมดสายกับไร้สายจำค่าแยกกันบนตัวเมาส์ ส่วน macro ไม่มีบนโปรโตคอลนี้
 
 ---
 
-## Install
+## ติดตั้งผ่าน Terminal (ไม่ต้องเปิดเบราว์เซอร์)
+
+### 1. โหลดไฟล์ .deb เวอร์ชันล่าสุด
 
 ```bash
-./install.sh
+VER=$(curl -fsSL https://api.github.com/repos/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+curl -fSL -o /tmp/ajazz.deb "https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/download/${VER}/ajazz-aj159p-${VER#v}.deb"
 ```
 
-The script installs Bun (if missing), sets up hidraw USB access (udev), builds the app, and adds it to your app menu. If the receiver is not detected afterwards, unplug it and plug it back in once.
+### 2. ติดตั้ง
 
-Manual udev rule (what the script installs):
-
+```bash
+sudo dpkg -i /tmp/ajazz.deb || sudo apt install -f -y
 ```
+
+### 3. เปิดสิทธิ์ให้แอปคุยกับเมาส์ (udev — ทำครั้งเดียว)
+
+```bash
+sudo tee /etc/udev/rules.d/70-ajazz-aj159p.rules > /dev/null <<'EOF'
 SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="249a", ATTRS{idProduct}=="5c2f", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="248a", ATTRS{idProduct}=="5c2e", MODE="0660", TAG+="uaccess"
+EOF
+sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-## Run
-
-Launch **AJAZZ AJ159P** from your app menu, or run:
+เสร็จแล้ว**ถอด dongle/สายแล้วเสียบใหม่หนึ่งครั้ง** แล้วเปิดแอปได้เลย:
 
 ```bash
 ajazz-aj159p
 ```
 
-For development (HMR):
+> ทางเลือกแบบไม่ใช้ sudo: โหลด `.AppImage` จากหน้า Releases แทน (`chmod +x` แล้วรันได้เลย) แต่ถ้าเปิดไม่ติดบนดิสโทรอื่น ลองลง `libfuse2` ก่อน
+
+---
+
+## ใช้งาน + อัพเดท
+
+- เสียบ dongle 2.4GHz หรือสาย USB → เปิดแอป → ตั้งค่าได้เลย (สลับโหมดได้ในแอป)
+- มีเวอร์ชันใหม่ แอปจะขึ้นป้ายเตือนในแถบบน → โหลดเสร็จกด **Restart to install** (กดเลขเวอร์ชันมุมขวาบนเช็คเองได้)
+- ถอนการติดตั้ง: `sudo dpkg -r ajazz-aj159p` (+ ลบไฟล์กฎ udev ข้างบนถ้าต้องการ)
+
+---
+
+## แก้เบื้องต้นถ้าใช้ไม่ได้
+
+| อาการ | ทำอะไร |
+|-------|---------|
+| แอปหาเมาส์ไม่เจอ | ขยับ/ปลุกเมาส์ก่อน, ถอดเสียบ dongle ใหม่, เช็คว่าทำขั้น udev ครบ |
+| ขึ้น permission/EACCES | กฎ udev ยังไม่เข้า — รันขั้น 3 ใหม่แล้วเสียบอุปกรณ์ใหม่ |
+| แบตขึ้น `…` ค้าง | ขยับเมาส์ให้ตื่นแล้วรอแป๊บ (โหมดสายไม่มี % แบต จะขึ้น Charging แทน) |
+| ตั้งค่าแล้วอีกโหมดไม่ตาม | ปกติ — สายกับไร้สายจำค่าแยกกัน กด sync ในหัวข้อ Connection Sync |
+
+---
+
+## Build เองจากซอร์ส (สำหรับนักพัฒนา)
 
 ```bash
 bun install
-bun run dev
-```
-
-## Uninstall
-
-```bash
-./install.sh --uninstall
+bun run dev      # รันแบบ dev (HMR)
+bun run package  # build ออก dist/ (.AppImage + .deb)
+bun test         # 98 tests
 ```
 
 ---
 
-## ติดตั้ง (ภาษาไทย)
+## Protocol (ย่อ)
 
-```bash
-./install.sh
-```
+คุยกับ receiver `249a:5c2f` / สาย `248a:5c2e` ผ่าน HID report 33 ไบต์บนช่อง vendor (`/dev/hidraw`, MI_02):
 
-สคริปต์จะลง Bun, ตั้งค่า USB (udev), build แอป และเพิ่มเข้า app menu ให้อัตโนมัติ ถ้าเสียบ receiver แล้วหาไม่เจอ ให้ถอดแล้วเสียบใหม่หนึ่งครั้ง
+| Report | ใช้ทำอะไร |
+|--------|------------|
+| `00 03 00 01 25` | DPI 6 ขั้น (100–26000, step 100) + ขั้นที่ใช้งาน |
+| `00 05 00 01` | ไฟ: off / static / breathing + สว่าง/เร็ว |
+| `00 04 00 01 12` | สีไฟรายขั้น DPI — ระบบสีจริงของเมาส์รุ่นนี้ |
+| `00 02 00 01 01` | Polling rate 125/250/500/1000 Hz |
+| `00 07 00 01 04` | Sleep timer (read-modify-write) |
+| `00 09 00 01 0F` | รีแมปปุ่ม 9 slot (read-modify-write) |
+| query `0x10`–`0x17` | อ่านค่ากลับ (info, ปุ่ม, polling, DPI, สี, ไฟ, sensor) |
 
-## วิธีรัน
-
-เปิด **AJAZZ AJ159P** จาก app menu หรือรันคำสั่ง:
-
-```bash
-ajazz-aj159p
-```
-
-## ถอนการติดตั้ง
-
-```bash
-./install.sh --uninstall
-```
-
----
-
-## Protocol
-
-The 2.4 GHz receiver (`249a:5c2f` XCTECH Wireless-Receiver) is driven through
-33-byte HID reports on its vendor interface (`/dev/hidraw`, MI_02) — no Windows
-capture was needed thanks to prior community reverse-engineering:
-
-| Report | Bytes | Purpose |
-|--------|-------|---------|
-| `00 03 00 01 25` | 33 | Six-stage DPI (100–26000, step 100) + active stage |
-| `00 05 00 01` | 33 | Lighting: off / static / breathing + brightness/speed (static RGB triplet ignored by firmware) |
-| `00 04 00 01 12` | 33 | Per-DPI-stage indicator colours — the visible LED and the mouse's real colour system |
-| `00 02 00 01 01` | 33 | Polling rate (125/250/500/1000 Hz) |
-| `00 07 00 01 04` | 33 | Sensor: sleep timer + lift-off + idle-light (read-modify-write) |
-| `00 09 00 01 0F` | 33 | Button mapping, 9 slots × 3 bytes (read-modify-write) |
-| `C0 …` (input) | — | Unsolicited battery pushes, percentage at byte 2 |
-| `10 …` (query `0x10`) | 32 | Device info; **live battery at byte 13** (query `0x20` is unreliable) |
-
-GET queries (write `[00, id, 00, 00, …]`, read reply): `0x10` device info,
-`0x11` button table, `0x12` report rate, `0x13` DPI table, `0x14` stage
-colours, `0x15` lighting state, `0x17` sensor.
-
-Checksum for all reports: `sum(bytes[5..31]) & 0xff` in the last byte.
-DPI encoding: `value / 100` as u16LE, duplicated per stage (verified by
-write→readback round-trip on a live AJ159P).
+Checksum ทุก report: `sum(bytes[5..31]) & 0xff` ลงไบต์สุดท้าย
 
 ---
 
 ## Credits
 
-- Scaffolded from [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux) (Electron + Vue app structure).
-- Protocol from [aj179-linux](https://github.com/johan-akn/aj179-linux) by johan-akn (HID report reverse-engineering, golden packets) and [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center) by Aiacos (AJ-series device matrix).
+- โครงแอปจาก [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux)
+- โปรโตคอลจาก [aj179-linux](https://github.com/johan-akn/aj179-linux) และ [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center)
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Not affiliated with AJAZZ. Use at your own risk.
+MIT — ดู [LICENSE](LICENSE) ไม่เกี่ยวข้องกับ AJAZZ ใช้งานเองรับความเสี่ยงเอง
