@@ -3,7 +3,7 @@
 **Parent:** ../AGENTS.md
 
 ## OVERVIEW
-100 tests across 13 files in `__tests__/`. Runner: `bun test` (Bun's built-in `bun:test`). No config files — relies on Bun's default `*.test.ts` discovery.
+89 tests across 12 files in `__tests__/`. Runner: `bun test` (Bun's built-in `bun:test`). No config files — relies on Bun's default `*.test.ts` discovery.
 
 ## STRUCTURE
 ```
@@ -19,7 +19,6 @@ __tests__/
 ├── RgbBuilder.test.ts        # 8 tests — golden hex, validation
 ├── settingsManager.test.ts   # 8 tests — defaults, coercion, validation
 ├── profileManager.test.ts    # 12 tests — mocks electron + fs/promises
-├── macro-templates.test.ts   # 11 tests — enum/template completeness (shared, reserved)
 ├── zzz-preload.test.ts       # 8 tests — static analysis of preload API surface
 ```
 
@@ -30,7 +29,6 @@ __tests__/
 | BatteryMonitor.test.ts | core/BatteryMonitor.ts | `vi.useFakeTimers()` + sync `vi.advanceTimersByTime()` in try/finally |
 | settingsManager.test.ts | storage/settingsManager.ts | Defaults, coercion, validation, deviceModel |
 | profileManager.test.ts | storage/profileManager.ts | `vi.mock('electron')`, `vi.mock('fs/promises')` shared mocks |
-| macro-templates.test.ts | shared/macro-templates.ts | Enum completeness, template structure |
 | zzz-preload.test.ts | preload/index.ts | Static analysis of API surface (method names, imports) |
 | *Builder.test.ts | protocols/*Builder.ts | Golden hex `builder.toString()`, validation throws |
 
@@ -52,7 +50,7 @@ __tests__/
 
 ## COMMANDS
 ```bash
-bun test                              # all 100 tests
+bun test                              # all 89 tests
 bun test __tests__/AjazzAJ159P.test.ts
 bun test __tests__/BatteryMonitor.test.ts
 bun test --coverage                   # coverage/ (gitignored)

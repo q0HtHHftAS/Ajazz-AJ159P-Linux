@@ -102,8 +102,13 @@ export class KeyTableBuilder {
 		return this;
 	}
 
-	/** Matches a slot's bytes to a known preset ID, or `custom`/`default`. */
-	static matchPreset(slot: number, marker: number, lo: number, hi: number): ButtonPresetId | 'default' | 'custom' {
+	/** Matches a slot's bytes to a known preset ID, or `default`/`custom`. */
+	static matchPreset(
+		slot: number,
+		marker: number,
+		lo: number,
+		hi: number,
+	): ButtonPresetId | 'default' | 'custom' {
 		if (marker === 0x10 && lo === 1 << slot && hi === 0x00) return 'default';
 		const nativeIndex = NATIVE_FLAGS.indexOf(lo as (typeof NATIVE_FLAGS)[number]);
 		if (marker === 0x10 && hi === 0x00 && nativeIndex >= 0) {

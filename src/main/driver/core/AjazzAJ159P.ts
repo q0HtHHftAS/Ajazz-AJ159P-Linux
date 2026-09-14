@@ -180,25 +180,44 @@ export class AjazzAJ159P extends EventEmitter<AjazzAJ159PEvents> {
 		// deliverFrame) — replies can no longer be lost between readers.
 		// Stale frames can't collide: SET echoes use family bytes below
 		// 0x10, which are never query IDs.
-		return new Promise<Buffer>((resolve, reject) => {
-			const timer = setTimeout(() => {
-				if (this.queryWaiter?.timer === timer) this.queryWaiter = null;
-				reject(new TimeoutError(`Timeout waiting for query 0x${queryId.toString(16)} reply`));
-			}, timeoutMs);
-			if (timer.unref) timer.unref();
-			this.queryWaiter = { id: queryId, resolve, timer };
-			try {
-				handle.write(buildQuery(queryId));
-			} catch (error) {
-				clearTimeout(timer);
-				this.queryWaiter = null;
-				reject(error);
+		const attempt = (): Promise<Buffer> =>
+			new Promise<Buffer>((resolve, reject) => {
+				const timer = setTimeout(() => {
+					if (this.queryWaiter?.timer === timer) this.queryWaiter = null;
+					reject(new TimeoutError(`Timeout waiting for query 0x${queryId.toString(16)} reply`));
+				}, timeoutMs);
+				if (timer.unref) timer.unref();
+				this.queryWaiter = { id: queryId, resolve, timer };
+				try {
+					handle.write(buildQuery(queryId));
+				} catch (error) {
+					clearTimeout(timer);
+					this.queryWaiter = null;
+					reject(error);
+				}
+			});
+		const spaced = async (): Promise<Buffer> => {
+			const gap = Date.now() - this.lastQueryAt;
+			if (gap < AjazzAJ159P.QUERY_GAP_MS) {
+				await new Promise((r) => setTimeout(r, AjazzAJ159P.QUERY_GAP_MS - gap));
 			}
-		});
+			try {
+				return await attempt();
+			} finally {
+				this.lastQueryAt = Date.now();
+			}
+		};
+		// One retry: a query sent while the firmware is still busy can be
+		// dropped silently.
+		return spaced().catch(() => spaced());
 	}
 
 	private queryWaiter: { id: number; resolve: (frame: Buffer) => void; timer: ReturnType<typeof setTimeout> } | null =
 		null;
+
+	/** Minimum gap between queries — the firmware drops queries sent back-to-back. */
+	private lastQueryAt = 0;
+	private static readonly QUERY_GAP_MS = 250;
 
 	private deliverFrame(frame: Buffer): void {
 		const waiter = this.queryWaiter;

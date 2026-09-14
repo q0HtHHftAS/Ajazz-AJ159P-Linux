@@ -45,6 +45,7 @@ write_udev() {
 	yellow "Setting up udev rules (requires sudo) …"
 	sudo tee "$UDEV_RULES" >/dev/null <<'UDEV'
 SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="249a", ATTRS{idProduct}=="5c2f", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="248a", ATTRS{idProduct}=="5c2e", MODE="0660", TAG+="uaccess"
 UDEV
 	sudo udevadm control --reload-rules
 	sudo udevadm trigger

@@ -1,64 +1,51 @@
 # RENDERER COMPONENTS KNOWLEDGE BASE
 
-**Generated:** 2026-08-04
 **Parent:** ../../../AGENTS.md
 
 ## OVERVIEW
-Vue 3 + Tailwind CSS + lucide-vue-next UI components. 14 components in `src/renderer/src/components/` + 2 in `widgets/`. Single-file `.vue` with `<script setup lang="ts">`.
+Vue 3 + Tailwind CSS + lucide-vue-next UI. Single-file `.vue` with `<script setup lang="ts">`. Layout: 3-column Dashboard (button remap + DPI | mouse render + reset | profiles + lighting/polling/sleep/stage-colors accordion).
 
 ## STRUCTURE
 ```
-src/renderer/src/components/
-├── BaseButton.vue        # Primary button (variants: green, red, gray, etc.)
-├── BaseInput.vue         # Text input
-├── BaseSelect.vue        # Select dropdown
-├── BaseSlider.vue        # Range slider
-├── BaseToggle.vue        # Toggle switch
-├── Card.vue              # Container card
-├── StatusMessage.vue     # Error/info banner
-├── LanguageSelector.vue  # Locale switcher (EN/ES)
-├── ThemeToggle.vue       # Dark/Light/Cappuccino theme switch
-├── BatteryIndicator.vue  # Widget: battery level + charging state
-├── ToastStack.vue        # Widget: toast notifications
-├── UserPreferences.vue   # Lighting, sleep, key response, RGB (largest)
-├── DpiSettings.vue       # 6-stage DPI config + angle snap/ripple
-├── MacroSettings.vue     # Simple button remap macros
-├── CustomMacroEditor.vue # Complex multi-event macro builder
-└── DeviceInfo.vue        # Device info + reset button
+src/renderer/src/
+├── App.vue                   # Shell: header (brand, model chip, battery), connect screen, Dashboard host
+├── main.ts                   # createApp + vue-i18n (en only)
+├── assets/main.css           # Theme CSS variables (--ajazz-*, --bg-*, --text-*)
+├── assets/mouse-aj159p.png   # AJ159P render with hotspot dots overlay
+├── components/
+│   ├── Dashboard.vue         # Main 3-column UI (largest)
+│   ├── BaseButton.vue        # Button (variants: minimal, green, red)
+│   ├── BaseInput.vue         # Text input
+│   ├── BaseSelect.vue        # Custom dropdown (string|number options)
+│   ├── BaseSlider.vue        # Range slider
+│   ├── BaseToggle.vue        # Toggle switch (currently unused)
+│   ├── StatusMessage.vue     # Error/success banner
+│   └── widgets/
+│       ├── BatteryIndicator.vue  # Battery % / waiting-for-reading / disconnected
+│       └── ToastStack.vue        # Toast notifications
+├── composables/useToast.ts
+├── env.d.ts                  # Window.api typing (mirrors preload)
+└── shims-vue.d.ts
 ```
 
 ## WHERE TO LOOK
 | Feature | Component | Key Props/Emits |
 |---------|-----------|-----------------|
-| Lighting/preferences | UserPreferences.vue | `v-model:preferences`, `isConnected`, `deviceModel`, `connectionMode`, `@reset-complete` |
-| DPI config | DpiSettings.vue | `isConnected`, `deviceModel` |
-| Simple macros | MacroSettings.vue | `isConnected` |
-| Custom macros | CustomMacroEditor.vue | `isConnected` |
-| Device info/reset | DeviceInfo.vue | `isConnected` |
+| Everything | Dashboard.vue | `isConnected`, `deviceModel`, `batteryLevel`, `@reset-complete` |
 | Battery widget | widgets/BatteryIndicator.vue | `level`, `connected` |
 | Toasts | widgets/ToastStack.vue | `toasts[]`, `@remove` |
-| Theme | ThemeToggle.vue | — (localStorage) |
-| Language | LanguageSelector.vue | — (i18n) |
 
 ## CONVENTIONS
 - **`<script setup lang="ts">`** — Composition API, TypeScript
 - **Tailwind utility classes** — custom CSS variables for theming (`--bg-primary`, `--text-primary`, `--ajazz-primary`, `--sidebar-bg`, etc.)
-- **`lucide-vue-next` icons** — imported per-component (Settings, Zap, Keyboard, etc.)
-- **`vue-i18n`** — `useI18n()`, `$t('key')` in templates, `t('key')` in script
-- **Props with defaults** — `withDefaults(defineProps<{...}>(), {...})`
-- **Emits typed** — `defineEmits<{...}>()`
-- **Reactive state** — `ref()`, `reactive()`, `computed()`, `watch()`
-- **IPC via `window.api`** — exposed by preload (28 methods: `connectDevice`, `setDpi`, `getBattery`, `setMacro`, `listProfiles`, etc.)
-- **Battery updates** — `window.api.onBatteryUpdated(callback)` returns cleanup fn
-- **Settings persistence** — `watch([activeTab, preferences, ...])` → `window.api.saveSettings()` (debounced via snapshot)
-- **Theme** — `localStorage.setItem('theme', ...)`, `document.documentElement.className = theme`
+- **`lucide-vue-next` icons** — imported per-component
+- **`vue-i18n`** — `useI18n()`, `$t('key')` in templates, `t('key')` in script; `locales/en.json`
+- **IPC via `window.api`** — exposed by preload (getDpiTable/getLedEffect/getStageColors/getButtons/setButtons/setDpi/setRgb/setDpiColors/setPollingRate/setSleep/...)
+- **Hardware is source of truth on mount** — Dashboard reads DPI table, LED effect, stage colors, polling, sleep, buttons from the device, then syncs the settings file
+- **Button remap menu is floating** (`fixed` position) so the panel never grows or shifts layout
+- **No fake controls** — every control maps to a hardware-validated report; unsupported features are omitted, not disabled
 
 ## ANTI-PATTERNS
 - **No test coverage** — renderer components have zero tests
-- **`window.api` typed as `any`** in components (preload exports `unknown` for most methods) — runtime validation in main/index.ts handlers
-- **Large components** — `UserPreferences.vue` (12.7KB), `CustomMacroEditor.vue` (9.4KB), `DpiSettings.vue` (7KB) — consider splitting
-- **No `defineModel`** (Vue 3.4+) — uses `v-model:preferences` with `defineProps`/`defineEmits` manually
-
-## TESTS
-- **None** — `__tests__/` only covers driver/protocols/storage
-- **No Playwright/Vitest config** — `.playwright-mcp/` is orphaned logs only
+- **Never add UI for unvalidated protocol** — validate write→readback (or physical press) on hardware first
+- **Never use inline-expanding menus in the fixed-size columns** — they push content out of view; use floating (`fixed`) panels

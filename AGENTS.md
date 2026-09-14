@@ -12,7 +12,7 @@ Cross-platform Electron + Vue 3 desktop app to configure the AJAZZ AJ159P / AJ15
 │   │   └── storage/    # JSON file persistence — see src/main/storage/AGENTS.md
 │   ├── preload/        # contextBridge IPC API (src/preload/index.ts)
 │   ├── renderer/       # Vue 3 + Tailwind UI — App.vue + Dashboard.vue (DPI/lighting/profiles)
-│   └── shared/         # Shared types (macro-templates, macro-types — reserved for future macro support)
+│   └── shared/         # (reserved for future shared types)
 ├── __tests__/          # 13 test files, bun:test — see __tests__/AGENTS.md
 ├── locales/            # i18n (en.json)
 ├── install.sh          # local build + udev hidraw rules + desktop entry
@@ -68,6 +68,7 @@ Cross-platform Electron + Vue 3 desktop app to configure the AJAZZ AJ159P / AJ15
 - **Never block the main process on hidraw reads** — transport opens O_NONBLOCK; BatteryMonitor polls on a timer
 - **No `*/` sequences inside block comments** — terminates the comment early (broke the bun parser once)
 - **Custom macros / key-response (debounce) are NOT implemented** — no wire encoding found on 249a:5c2f; capabilities API reports them false. Button presets cover native clicks, media keys and Ctrl+C/V; DPI-Cycle and Disable have no known encoding
+- **Macros not supported on this hardware (validated 2026-09-14)**: M620 firmware silently drops macro content on both 2.4G and USB nodes (no echo, no playback). No macro code ships; capabilities API reports macros false
 - **Visible LED = DPI-stage indicator**: stage colours (report 00 04) are the mouse's colour system; the RGB triplet in the static-lighting report is ignored by this firmware (verified: green stage write turned the LED green)
 
 ## UNIQUE STYLES
@@ -87,7 +88,7 @@ bun run package          # build + electron-builder → dist/
 bun run lint             # eslint . (0 errors required; empty-fn test warnings OK)
 bun run format:fix       # prettier --write
 bun run typecheck        # tsc --noEmit
-bun test                 # 100 tests, bun:test
+bun test                 # 89 tests, bun:test
 ./install.sh             # udev rules + build + desktop entry
 ```
 
