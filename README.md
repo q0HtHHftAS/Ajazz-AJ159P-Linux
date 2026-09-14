@@ -1,11 +1,6 @@
 # AJAZZ AJ159P Linux
 
-Desktop app to configure your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Ubuntu — DPI, lighting, battery. Built with Electron + Vue 3.
-
-> Artwork (icon, mouse render) uses AJAZZ images. DPI range is 100–26000
-> (hardware-verified). Polling rate, button remap and sleep timer are
-> supported; custom macros and key-response (debounce) are not available on
-> this receiver protocol.
+<img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/d28040b6-5572-47c8-a675-22aafa0376ea" />
 
 ---
 
