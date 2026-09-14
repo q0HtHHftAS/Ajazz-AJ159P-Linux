@@ -1,32 +1,34 @@
 # AJAZZ AJ159P Driver for Linux
 
+[English](README.md) | [ภาษาไทย](README.th.md)
+
 [![Release](https://img.shields.io/github/v/release/q0HtHHftAS/Ajazz-AJ159P-Linux)](https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-โปรแกรมตั้งค่าเมาส์เกมมิ่ง **AJAZZ AJ159P / AJ159 Pro** บน Linux — DPI, ไฟ, polling rate, รีแมปปุ่ม, sleep timer, แบตเตอรี่ ผ่านตัวรับ 2.4GHz หรือสาย USB (ไดรเวอร์ศูนย์มีแค่ Windows อันนี้ทำขึ้นมาทดแทน)
+Configures your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux — DPI, lighting, polling rate, button remap, sleep timer, battery — over the 2.4GHz receiver or USB cable. The official AJAZZ driver is Windows-only; this is a community replacement.
 
 <img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/e47e255c-612d-4bea-89b6-fe7e0a3489cc" />
 
-> รองรับ **Ubuntu** (ทดสอบบน Ubuntu 26.04) — ดิสโทรอื่นไม่รับประกันว่าเปิดติด/ใช้งานได้
-> DPI 100–26000 (เทสกับเครื่องจริงแล้ว) โหมดสายกับไร้สายจำค่าแยกกันบนตัวเมาส์ ส่วน macro ไม่มีบนโปรโตคอลนี้
+> Supports **Ubuntu** (tested on Ubuntu 26.04) — other distros are not guaranteed to run it.
+> DPI 100–26000 (hardware-verified). Wired and wireless keep separate on-device profiles. Macros are not available on this protocol.
 
 ---
 
-## ติดตั้งผ่าน Terminal (ไม่ต้องเปิดเบราว์เซอร์)
+## Install via Terminal (no browser needed)
 
-### 1. โหลดไฟล์ .deb เวอร์ชันล่าสุด
+### 1. Download the latest .deb
 
 ```bash
 VER=$(curl -fsSL https://api.github.com/repos/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
 curl -fSL -o /tmp/ajazz.deb "https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/download/${VER}/ajazz-aj159p-${VER#v}.deb"
 ```
 
-### 2. ติดตั้ง
+### 2. Install
 
 ```bash
 sudo dpkg -i /tmp/ajazz.deb || sudo apt install -f -y
 ```
 
-### 3. เปิดสิทธิ์ให้แอปคุยกับเมาส์ (udev — ทำครั้งเดียว)
+### 3. Grant the app access to the mouse (udev — one time)
 
 ```bash
 sudo tee /etc/udev/rules.d/70-ajazz-aj159p.rules > /dev/null <<'EOF'
@@ -36,71 +38,71 @@ EOF
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-เสร็จแล้ว**ถอด dongle/สายแล้วเสียบใหม่หนึ่งครั้ง** แล้วเปิดแอปได้เลย:
+Then **unplug and re-plug the dongle/cable once**, and launch:
 
 ```bash
 ajazz-aj159p
 ```
 
-> ทางเลือกแบบไม่ใช้ sudo: โหลด `.AppImage` จากหน้า Releases แทน (`chmod +x` แล้วรันได้เลย) แต่ถ้าเปิดไม่ติดบนดิสโทรอื่น ลองลง `libfuse2` ก่อน
+> No-sudo alternative: grab the `.AppImage` from the Releases page instead (`chmod +x` and run). If it won't start on other distros, install `libfuse2` first.
 
 ---
 
-## ใช้งาน + อัพเดท
+## Use + update
 
-- เสียบ dongle 2.4GHz หรือสาย USB → เปิดแอป → ตั้งค่าได้เลย (สลับโหมดได้ในแอป)
-- มีเวอร์ชันใหม่ แอปจะขึ้นป้ายเตือนในแถบบน → โหลดเสร็จกด **Restart to install** (กดเลขเวอร์ชันมุมขวาบนเช็คเองได้)
-- ถอนการติดตั้ง: `sudo dpkg -r ajazz-aj159p` (+ ลบไฟล์กฎ udev ข้างบนถ้าต้องการ)
-
----
-
-## แก้เบื้องต้นถ้าใช้ไม่ได้
-
-| อาการ | ทำอะไร |
-|-------|---------|
-| แอปหาเมาส์ไม่เจอ | ขยับ/ปลุกเมาส์ก่อน, ถอดเสียบ dongle ใหม่, เช็คว่าทำขั้น udev ครบ |
-| ขึ้น permission/EACCES | กฎ udev ยังไม่เข้า — รันขั้น 3 ใหม่แล้วเสียบอุปกรณ์ใหม่ |
-| แบตขึ้น `…` ค้าง | ขยับเมาส์ให้ตื่นแล้วรอแป๊บ (โหมดสายไม่มี % แบต จะขึ้น Charging แทน) |
-| ตั้งค่าแล้วอีกโหมดไม่ตาม | ปกติ — สายกับไร้สายจำค่าแยกกัน กด sync ในหัวข้อ Connection Sync |
+- Plug in the 2.4GHz dongle or USB cable → open the app → configure (switch modes in-app)
+- On a new release the app shows a header badge → press **Restart to install** once downloaded (click the version number top-right to check manually)
+- Uninstall: `sudo dpkg -r ajazz-aj159p` (+ remove the udev rule above if you like)
 
 ---
 
-## Build เองจากซอร์ส (สำหรับนักพัฒนา)
+## Quick troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Mouse not detected | Wake the mouse first, re-plug the dongle, verify the udev step |
+| permission/EACCES | udev rule not applied — redo step 3 and re-plug the device |
+| Battery stuck at `…` | Wake the mouse and wait a moment (wired mode shows Charging instead of %) |
+| Other mode didn't follow a change | Normal — wired/wireless profiles are separate, sync via Connection Sync |
+
+---
+
+## Build from source (developers)
 
 ```bash
 bun install
-bun run dev      # รันแบบ dev (HMR)
-bun run package  # build ออก dist/ (.AppImage + .deb)
+bun run dev      # dev mode (HMR)
+bun run package  # build dist/ (.AppImage + .deb)
 bun test         # 98 tests
 ```
 
 ---
 
-## Protocol (ย่อ)
+## Protocol (summary)
 
-คุยกับ receiver `249a:5c2f` / สาย `248a:5c2e` ผ่าน HID report 33 ไบต์บนช่อง vendor (`/dev/hidraw`, MI_02):
+Talks to the receiver `249a:5c2f` / cable `248a:5c2e` via 33-byte HID reports on the vendor interface (`/dev/hidraw`, MI_02):
 
-| Report | ใช้ทำอะไร |
-|--------|------------|
-| `00 03 00 01 25` | DPI 6 ขั้น (100–26000, step 100) + ขั้นที่ใช้งาน |
-| `00 05 00 01` | ไฟ: off / static / breathing + สว่าง/เร็ว |
-| `00 04 00 01 12` | สีไฟรายขั้น DPI — ระบบสีจริงของเมาส์รุ่นนี้ |
+| Report | Purpose |
+|--------|---------|
+| `00 03 00 01 25` | 6-stage DPI (100–26000, step 100) + active stage |
+| `00 05 00 01` | Lighting: off / static / breathing + brightness/speed |
+| `00 04 00 01 12` | Per-stage indicator colours — the mouse's real colour system |
 | `00 02 00 01 01` | Polling rate 125/250/500/1000 Hz |
 | `00 07 00 01 04` | Sleep timer (read-modify-write) |
-| `00 09 00 01 0F` | รีแมปปุ่ม 9 slot (read-modify-write) |
-| query `0x10`–`0x17` | อ่านค่ากลับ (info, ปุ่ม, polling, DPI, สี, ไฟ, sensor) |
+| `00 09 00 01 0F` | Button mapping, 9 slots (read-modify-write) |
+| queries `0x10`–`0x17` | Readback (info, buttons, polling, DPI, colours, lighting, sensor) |
 
-Checksum ทุก report: `sum(bytes[5..31]) & 0xff` ลงไบต์สุดท้าย
+Checksum for all reports: `sum(bytes[5..31]) & 0xff` in the last byte.
 
 ---
 
 ## Credits
 
-- โครงแอปจาก [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux)
-- โปรโตคอลจาก [aj179-linux](https://github.com/johan-akn/aj179-linux) และ [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center)
+- App scaffold from [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux)
+- Protocol from [aj179-linux](https://github.com/johan-akn/aj179-linux) and [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center)
 
 ---
 
 ## License
 
-MIT — ดู [LICENSE](LICENSE) ไม่เกี่ยวข้องกับ AJAZZ ใช้งานเองรับความเสี่ยงเอง
+MIT — see [LICENSE](LICENSE). Not affiliated with AJAZZ. Use at your own risk.
