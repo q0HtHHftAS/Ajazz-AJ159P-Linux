@@ -2,6 +2,7 @@
 	"dashboard": {
 		"profile": "Profile",
 		"noProfiles": "No saved profiles yet",
+		"noProfilesHint": "Tune your mouse, then save the setup here to reuse anytime",
 		"dpiSettings": "DPI Settings",
 		"apply": "Apply",
 		"lightSettings": "Light Settings",

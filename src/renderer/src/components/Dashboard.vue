@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Plus, Trash2, ChevronDown, RotateCcw, Check, ArrowLeftRight } from 'lucide-vue-next';
+import { Trash2, ChevronDown, RotateCcw, Check, ArrowLeftRight, Layers } from 'lucide-vue-next';
 import BaseButton from './BaseButton.vue';
 import BaseInput from './BaseInput.vue';
 import BaseSelect from './BaseSelect.vue';
@@ -520,14 +520,19 @@ const syncCurrentSettings = async () => {
 // ---------------------------------------------------------------- profiles
 const profiles = ref<string[]>([]);
 const newProfileName = ref('');
+const saveHover = ref(false);
+const saveFocus = ref(false);
+// Reveal Save on row hover or while typing; hidden when there is nothing to save.
+const showSaveButton = computed(() => newProfileName.value.trim() !== '' && (saveHover.value || saveFocus.value));
 
 const loadProfiles = async () => {
 	profiles.value = await window.api.listProfiles();
 };
 
 const saveProfile = async () => {
-	if (!newProfileName.value) return;
-	await window.api.saveProfile(newProfileName.value, {
+	const name = newProfileName.value.trim();
+	if (!name) return;
+	await window.api.saveProfile(name, {
 		dpi: JSON.parse(JSON.stringify(dpi)),
 		rgb: JSON.parse(JSON.stringify(lighting)),
 		colors: [...lighting.colors],
@@ -1014,23 +1019,40 @@ onMounted(async () => {
 								@click.stop="deleteProfile(p)"
 							/>
 						</button>
-						<p v-if="profiles.length === 0" class="text-xs text-[var(--text-muted)] px-1 py-2 text-center">
-							{{ $t('dashboard.noProfiles') }}
-						</p>
-						<div class="flex gap-2">
+						<div
+							v-if="profiles.length === 0"
+							class="flex flex-col items-center text-center px-2 py-5 gap-1.5"
+						>
+							<span
+								class="w-10 h-10 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center mb-1"
+							>
+								<Layers class="w-5 h-5 text-[var(--text-muted)]" />
+							</span>
+							<p class="text-sm font-medium text-[var(--text-secondary)]">
+								{{ $t('dashboard.noProfiles') }}
+							</p>
+							<p class="text-xs text-[var(--text-muted)] leading-relaxed">
+								{{ $t('dashboard.noProfilesHint') }}
+							</p>
+						</div>
+						<div class="flex gap-2" @mouseenter="saveHover = true" @mouseleave="saveHover = false">
 							<BaseInput
 								v-model="newProfileName"
 								:placeholder="$t('preferences.newProfilePlaceholder')"
 								class="flex-1 min-w-0"
+								@focus="saveFocus = true"
+								@blur="saveFocus = false"
+								@keyup.enter="saveProfile"
 							/>
-							<button
+							<BaseButton
+								v-if="showSaveButton"
 								@click="saveProfile"
-								:disabled="!newProfileName"
-								class="px-3 rounded-lg bg-[var(--bg-elevated)] hover:bg-[#E95420] hover:text-white text-[var(--text-secondary)] transition-all disabled:opacity-40"
+								variant="green"
+								class="!px-3 text-xs whitespace-nowrap"
 								:aria-label="$t('preferences.saveProfile')"
 							>
-								<Plus class="w-4 h-4" />
-							</button>
+								{{ $t('preferences.saveProfile') }}
+							</BaseButton>
 						</div>
 					</div>
 				</section>

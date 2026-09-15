@@ -10,6 +10,7 @@ import BaseButton from './components/BaseButton.vue';
 import { useToast } from './composables/useToast';
 import { useI18n } from 'vue-i18n';
 import packageInfo from '../../../package.json';
+import ajazzLogo from './assets/ajazz.svg';
 
 const version = packageInfo.version;
 const isConnected = ref(false);
@@ -125,11 +126,6 @@ const refreshDevices = async () => {
 const otherKind = computed(() => (connectionKind.value === 'wired' ? 'wireless' : 'wired'));
 const canSwitch = computed(() => availableKinds.value.includes(otherKind.value));
 
-// Charging = on wireless while the USB cable is also plugged in.
-const isCharging = computed(
-	() => isConnected.value && connectionKind.value === 'wireless' && availableKinds.value.includes('wired'),
-);
-
 const switchConnection = async () => {
 	if (switching.value || !canSwitch.value) return;
 	switching.value = true;
@@ -198,14 +194,19 @@ const pollDevices = async () => {
 		await disconnectQuiet();
 		return;
 	}
+	// Live device list: keeps the mode-switch button accurate without needing focus.
+	if (kinds.length !== availableKinds.value.length || kinds.some((k) => !availableKinds.value.includes(k))) {
+		availableKinds.value = [...new Set(kinds)];
+	}
 	if (!kinds.includes(connectionKind.value)) {
 		// Current mode unplugged while the other is present — follow it.
 		await doConnect(kinds[0] ?? 'wireless', true);
 	}
 };
 
-const handleFocus = () => {
-	void refreshDevices();
+const handleFocus = async () => {
+	// Sequential so the device list settles before the battery query runs.
+	await refreshDevices();
 	if (isConnected.value) void updateBattery();
 };
 
@@ -231,7 +232,6 @@ onMounted(async () => {
 
 	try {
 		window.api.onBatteryUpdated((level: number) => {
-			// Ignore stray wireless readings while on wired USB.
 			if (connectionKind.value === 'wired') return;
 			batteryLevel.value = level;
 		});
@@ -299,6 +299,7 @@ onUnmounted(() => {
 			class="flex items-center gap-4 px-6 py-2 bg-[var(--sidebar-bg)] border-b border-[var(--sidebar-border)] flex-shrink-0"
 		>
 			<div class="flex items-center gap-2">
+				<img :src="ajazzLogo" alt="AJAZZ logo" class="h-6 w-auto invert" draggable="false" />
 				<h1 class="text-lg font-bold tracking-wide whitespace-nowrap">
 					<span class="text-[#E95420]">AJAZZ</span>
 					<span class="text-[var(--text-primary)]"> AJ159P</span>
@@ -373,12 +374,7 @@ onUnmounted(() => {
 				>
 					<RotateCw class="w-4 h-4" :class="busy ? 'animate-spin' : ''" />
 				</button>
-				<BatteryIndicator
-					:level="batteryLevel"
-					:connected="isConnected"
-					:kind="connectionKind"
-					:charging="isCharging"
-				/>
+				<BatteryIndicator :level="batteryLevel" :connected="isConnected" :kind="connectionKind" />
 			</div>
 			<button
 				@click="checkManually"

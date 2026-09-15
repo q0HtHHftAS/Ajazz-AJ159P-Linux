@@ -353,11 +353,23 @@ app.whenReady().then(() => {
 		return driver.getSensorSettings();
 	});
 
+	/**
+	 * UI row ↔ firmware slot map for the side buttons. Hardware-verified:
+	 * physical button 4 (front) fires slot 4 and button 5 (rear) fires slot 3,
+	 * so UI rows 4/5 are crossed vs slot order. Self-inverse: the same table
+	 * reorders in both directions.
+	 */
+	const BUTTON_ROW_TO_SLOT = [0, 1, 2, 4, 3] as const;
+
 	ipcMain.handle('get-buttons', () => {
 		if (!driver) throw new Error('Device not connected');
-		return driver
-			.getKeySlots()
-			.then((slots) => slots.map(([marker, lo, hi], slot) => KeyTableBuilder.matchPreset(slot, marker, lo, hi)));
+		return driver.getKeySlots().then((slots) =>
+			BUTTON_ROW_TO_SLOT.map((slot) => {
+				const entry = slots[slot];
+				if (!entry) return 'custom' as const;
+				return KeyTableBuilder.matchPreset(slot, entry[0], entry[1], entry[2]);
+			}),
+		);
 	});
 
 	ipcMain.handle('get-dpi-table', () => {
@@ -380,7 +392,10 @@ app.whenReady().then(() => {
 		if (!Array.isArray(presets) || presets.length !== KEY_SLOT_COUNT) {
 			throw new Error(`Invalid presets: must be an array of ${KEY_SLOT_COUNT} preset IDs`);
 		}
-		return driver.setKeySlots(presets as (ButtonPresetId | 'default' | 'custom')[]);
+		const rows = presets as (ButtonPresetId | 'default' | 'custom')[];
+		const at = (i: number): ButtonPresetId | 'default' | 'custom' => rows[i] ?? 'default';
+		// Reorder UI rows → firmware slots (see BUTTON_ROW_TO_SLOT).
+		return driver.setKeySlots([at(0), at(1), at(2), at(4), at(3)]);
 	});
 
 	ipcMain.handle('reset-device', async () => {
