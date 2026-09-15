@@ -4,31 +4,30 @@
 
 [![Release](https://img.shields.io/github/v/release/q0HtHHftAS/Ajazz-AJ159P-Linux)](https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Configures your **AJAZZ AJ159P / AJ159 Pro** gaming mouse on Linux — DPI, lighting, polling rate, button remap, sleep timer, battery — over the 2.4GHz receiver or USB cable. The official AJAZZ driver is Windows-only; this is a community replacement.
+This tool configures the AJAZZ AJ159P and AJ159 Pro gaming mouse on Linux. It covers DPI, lighting, polling rate, button remap, sleep timer, and battery level. It works over the 2.4GHz receiver or a USB cable. The official AJAZZ driver runs on Windows only.
 
-<img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/e47e255c-612d-4bea-89b6-fe7e0a3489cc" />
+Ubuntu is supported. Tests run on Ubuntu 26.04. Other distributions can fail to run the tool.
 
-> Supports **Ubuntu** (tested on Ubuntu 26.04) — other distros are not guaranteed to run it.
-> DPI 100–26000 (hardware-verified). Wired and wireless keep separate on-device profiles. Macros are not available on this protocol.
+The DPI range is 100 to 26000. Tests on live hardware confirm the range. Wired and wireless connections keep separate profiles on the mouse. Macros are not available on this protocol.
 
----
+## Install
 
-## Install via Terminal (no browser needed)
+Install the tool through the terminal. No browser is needed.
 
-### 1. Download the latest .deb
+1. Download the latest .deb package:
 
 ```bash
 VER=$(curl -fsSL https://api.github.com/repos/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
 curl -fSL -o /tmp/ajazz.deb "https://github.com/q0HtHHftAS/Ajazz-AJ159P-Linux/releases/download/${VER}/ajazz-aj159p-${VER#v}.deb"
 ```
 
-### 2. Install
+2. Install the package:
 
 ```bash
 sudo dpkg -i /tmp/ajazz.deb || sudo apt install -f -y
 ```
 
-### 3. Grant the app access to the mouse (udev — one time)
+3. Add the udev rule. A udev rule is a Linux permission entry for hardware. You perform this step one time only:
 
 ```bash
 sudo tee /etc/udev/rules.d/70-ajazz-aj159p.rules > /dev/null <<'EOF'
@@ -38,71 +37,64 @@ EOF
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-Then **unplug and re-plug the dongle/cable once**, and launch:
+4. Unplug the dongle or cable and plug it back in once.
+
+5. Start the app:
 
 ```bash
 ajazz-aj159p
 ```
 
-> No-sudo alternative: grab the `.AppImage` from the Releases page instead (`chmod +x` and run). If it won't start on other distros, install `libfuse2` first.
+To install without sudo, download the .AppImage file from the Releases page, mark it executable, and run it. If it does not start on other distributions, install libfuse2 first.
 
----
+## Use and update
 
-## Use + update
+Plug in the dongle or cable and open the app. Change the configuration in the app.
 
-- Plug in the 2.4GHz dongle or USB cable → open the app → configure (switch modes in-app)
-- On a new release the app shows a header badge → press **Restart to install** once downloaded (click the version number top-right to check manually)
-- Uninstall: `sudo dpkg -r ajazz-aj159p` (+ remove the udev rule above if you like)
+When a new release exists, the app shows a badge in the header. Press Restart to install after the download completes. To check by hand, click the version number in the top-right corner.
 
----
+Remove the package with the command sudo dpkg -r ajazz-aj159p. You can also delete /etc/udev/rules.d/70-ajazz-aj159p.rules.
 
-## Quick troubleshooting
+## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Mouse not detected | Wake the mouse first, re-plug the dongle, verify the udev step |
-| permission/EACCES | udev rule not applied — redo step 3 and re-plug the device |
-| Battery stuck at `…` | Wake the mouse and wait a moment (wired mode shows Charging instead of %) |
-| Other mode didn't follow a change | Normal — wired/wireless profiles are separate, sync via Connection Sync |
+| The app does not detect the mouse | Wake the mouse first. Re-plug the dongle. Make sure that you completed the udev step. |
+| A permission or EACCES error appears | Repeat step 3 and re-plug the device. |
+| The battery is stuck at … | Wake the mouse and wait. Wired mode shows Charging instead of a percent. |
+| The other mode ignores a change | This is normal. Wired and wireless profiles are separate. Sync them with Connection Sync. |
 
----
+## Build from source
 
-## Build from source (developers)
+Run these commands to build from source:
 
 ```bash
 bun install
-bun run dev      # dev mode (HMR)
-bun run package  # build dist/ (.AppImage + .deb)
-bun test         # 98 tests
+bun run dev
+bun run package
+bun test
 ```
 
----
+## Protocol
 
-## Protocol (summary)
-
-Talks to the receiver `249a:5c2f` / cable `248a:5c2e` via 33-byte HID reports on the vendor interface (`/dev/hidraw`, MI_02):
+The tool talks to receiver 249a:5c2f and cable 248a:5c2e. It sends 33-byte HID reports on the vendor channel (/dev/hidraw, MI_02).
 
 | Report | Purpose |
 |--------|---------|
-| `00 03 00 01 25` | 6-stage DPI (100–26000, step 100) + active stage |
-| `00 05 00 01` | Lighting: off / static / breathing + brightness/speed |
-| `00 04 00 01 12` | Per-stage indicator colours — the mouse's real colour system |
-| `00 02 00 01 01` | Polling rate 125/250/500/1000 Hz |
+| `00 03 00 01 25` | Six-stage DPI (100 to 26000, step 100) and the active stage |
+| `00 05 00 01` | Lighting: off, static, or breathing, with brightness and speed |
+| `00 04 00 01 12` | Per-stage indicator colours, the real colour system of the mouse |
+| `00 02 00 01 01` | Polling rate: 125, 250, 500, or 1000 Hz |
 | `00 07 00 01 04` | Sleep timer (read-modify-write) |
 | `00 09 00 01 0F` | Button mapping, 9 slots (read-modify-write) |
-| queries `0x10`–`0x17` | Readback (info, buttons, polling, DPI, colours, lighting, sensor) |
+| Queries `0x10` to `0x17` | Readback of info, buttons, polling, DPI, colours, lighting, sensor |
 
-Checksum for all reports: `sum(bytes[5..31]) & 0xff` in the last byte.
-
----
+Each report ends with a checksum. The checksum is sum(bytes[5..31]) & 0xff.
 
 ## Credits
 
-- App scaffold from [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux)
-- Protocol from [aj179-linux](https://github.com/johan-akn/aj179-linux) and [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center)
-
----
+The app scaffold comes from [Attack-Shark-X11-Software-Linux](https://github.com/q0HtHHftAS/Attack-Shark-X11-Software-Linux). The protocol comes from [aj179-linux](https://github.com/johan-akn/aj179-linux) and [ajazz-control-center](https://github.com/Aiacos/ajazz-control-center).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Not affiliated with AJAZZ. Use at your own risk.
+The license is MIT. See LICENSE. This project has no link to AJAZZ. You use it at your own risk.
