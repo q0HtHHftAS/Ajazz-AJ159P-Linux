@@ -10,6 +10,8 @@ Ubuntu is supported. Tests run on Ubuntu 26.04. Other distributions can fail to 
 
 The DPI range is 100 to 26000. Tests on live hardware confirm the range. Wired and wireless connections keep separate profiles on the mouse. Macros are not available on this protocol.
 
+<img width="1410" height="908" alt="image" src="https://github.com/user-attachments/assets/e47e255c-612d-4bea-89b6-fe7e0a3489cc" />
+
 ## Install
 
 Install the tool through the terminal. No browser is needed.
